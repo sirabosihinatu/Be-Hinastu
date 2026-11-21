@@ -16,7 +16,16 @@
       --muted: #8e8e98;
       --font-en: "Inter", "Noto Sans JP", sans-serif;
       --font-jp: "Noto Sans JP", "Inter", sans-serif;
+      --card-w: 240px;
     }
+
+    /* 広い全画面表示ではオレンジ枠に合わせて左カードを大きく拡大 */
+    @media (min-width: 1100px) {
+      :root {
+        --card-w: 340px;
+      }
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background: var(--bg);
@@ -26,20 +35,14 @@
       overflow-x: hidden;
     }
 
-    /* 英数字・見出し・日付用のInter Black */
-    .font-en {
-      font-family: var(--font-en);
-      font-weight: 900;
-    }
-
     /* 画面端まで使う2カラムレイアウト */
     .layout {
       display: grid;
-      grid-template-columns: 320px 1fr;
+      grid-template-columns: calc(var(--card-w) + 64px) 1fr;
       width: 100%;
       min-height: 100vh;
       padding: 24px 28px;
-      gap: 36px;
+      gap: 32px;
     }
 
     /* 左カラム（固定プレビュー） */
@@ -62,50 +65,71 @@
     .featured-date {
       font-family: var(--font-en);
       font-weight: 900;
-      font-size: 2.1rem;
+      font-size: clamp(2.1rem, 2.8vw, 2.75rem);
       letter-spacing: 0.01em;
       margin-bottom: 14px;
       text-align: center;
     }
     .featured-card {
       position: relative;
-      width: 240px;
+      width: var(--card-w);
       aspect-ratio: 9 / 17.5;
-      border-radius: 16px;
+      border-radius: 18px;
       overflow: hidden;
       background: #0d0d10;
       border: 1px solid #1f1f24;
       user-select: none;
+      transition: width 0.25s ease;
     }
     .featured-card .main-img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
+      opacity: 1;
+      transition: opacity 0.28s ease;
+      -webkit-user-drag: none;
+      pointer-events: none;
     }
-    /* 右上配置のワイプ小窓 */
+    .featured-card .main-img.fading {
+      opacity: 0.15;
+    }
+
+    /* 右上初期配置・ドラッグ移動可能なワイプ小窓 */
     .featured-card .sub-pip {
       position: absolute;
-      top: 10px;
-      right: 10px;
+      top: 12px;
+      right: 12px;
       width: 34%;
       aspect-ratio: 9 / 17;
-      border-radius: 9px;
+      border-radius: 11px;
       overflow: hidden;
-      border: 2px solid #000000;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.75);
-      cursor: pointer;
-      transition: transform 0.15s ease;
+      border: 2px solid rgba(255, 255, 255, 0.22);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.82);
+      cursor: grab;
+      touch-action: none;
+      z-index: 5;
+      transition: box-shadow 0.18s ease, transform 0.18s ease;
     }
-    .featured-card .sub-pip:hover {
-      transform: scale(1.04);
+    .featured-card .sub-pip.dragging {
+      cursor: grabbing;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.95);
+      border-color: rgba(255, 255, 255, 0.65);
     }
     .featured-card .sub-pip img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
+      opacity: 1;
+      transition: opacity 0.28s ease;
+      -webkit-user-drag: none;
+      pointer-events: none;
     }
+    .featured-card .sub-pip img.fading {
+      opacity: 0.15;
+    }
+
     .featured-empty {
       width: 100%;
       height: 100%;
@@ -120,13 +144,17 @@
     .featured-memo {
       margin-top: 12px;
       font-family: var(--font-jp);
-      font-size: 0.85rem;
+      font-size: 0.88rem;
       font-weight: 700;
       color: #e4e4e8;
       text-align: center;
-      max-width: 240px;
-      line-height: 1.4;
+      max-width: var(--card-w);
+      line-height: 1.45;
       min-height: 1.4em;
+      transition: opacity 0.25s ease;
+    }
+    .featured-memo.fading {
+      opacity: 0.2;
     }
 
     /* 右カラム（カレンダーアーカイブ） */
@@ -134,7 +162,7 @@
       position: relative;
       width: 100%;
       padding-bottom: 64px;
-      padding-right: 64px;
+      padding-right: 96px;
     }
     .top-actions {
       position: fixed;
@@ -148,8 +176,9 @@
       width: 42px;
       height: 42px;
       border-radius: 50%;
-      background: #232329;
-      border: 1px solid #32323a;
+      background: rgba(35, 35, 41, 0.82);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
       color: #ffffff;
       display: flex;
       align-items: center;
@@ -158,7 +187,7 @@
       transition: background 0.15s, transform 0.15s;
     }
     .icon-btn:hover {
-      background: #32323b;
+      background: rgba(56, 56, 66, 0.92);
       transform: scale(1.05);
     }
     .icon-btn svg {
@@ -205,23 +234,45 @@
       gap: 8px;
       min-width: 0;
     }
+
+    /* 未撮影日：リキッドグラス効果 */
     .day-thumb {
       position: relative;
       width: 100%;
       aspect-ratio: 9 / 17.5;
-      border-radius: 7px;
-      background: #060608;
-      border: 1px solid #16161b;
+      border-radius: 9px;
+      background:
+        radial-gradient(120% 90% at 20% 10%, rgba(255, 255, 255, 0.11) 0%, rgba(255, 255, 255, 0.02) 55%, rgba(255, 255, 255, 0.05) 100%),
+        rgba(24, 24, 30, 0.42);
+      backdrop-filter: blur(14px) saturate(160%);
+      -webkit-backdrop-filter: blur(14px) saturate(160%);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      box-shadow:
+        inset 0 1px 0.5px rgba(255, 255, 255, 0.24),
+        inset 0 -1px 1px rgba(255, 255, 255, 0.05),
+        0 6px 18px rgba(0, 0, 0, 0.45);
       overflow: hidden;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
     }
+    .day-thumb:not(.has-post):hover {
+      border-color: rgba(255, 255, 255, 0.24);
+      box-shadow:
+        inset 0 1px 1px rgba(255, 255, 255, 0.35),
+        0 8px 22px rgba(255, 255, 255, 0.06);
+    }
+
+    /* 撮影済み日 */
     .day-thumb.has-post {
+      background: #09090c;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
       cursor: pointer;
-      border-color: #26262e;
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      border-color: rgba(255, 255, 255, 0.16);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
     }
     .day-thumb.has-post:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(255, 255, 255, 0.12);
+      box-shadow: 0 8px 20px rgba(255, 255, 255, 0.14);
     }
     .day-thumb.active {
       outline: 2px solid #ffffff;
@@ -241,7 +292,7 @@
       aspect-ratio: 9 / 17;
       border-radius: 4px;
       overflow: hidden;
-      border: 1px solid #000000;
+      border: 1px solid rgba(0, 0, 0, 0.85);
     }
     .day-thumb .t-sub img {
       width: 100%;
@@ -261,7 +312,7 @@
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.78);
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(6px);
       display: none;
       align-items: center;
       justify-content: center;
@@ -382,6 +433,9 @@
 
     /* スマホ表示対応 */
     @media (max-width: 860px) {
+      :root {
+        --card-w: 240px;
+      }
       .layout {
         grid-template-columns: 1fr;
         padding: 16px 12px;
@@ -498,6 +552,10 @@
     let selectedDateStr = null;
     let frontDataUrl = null;
     let backDataUrl = null;
+
+    // 小窓のカスタム位置（nullのときはCSSの右上デフォルト位置）
+    let customPipPos = null; // { left: number, top: number }
+    let isSwappedView = false;
 
     window.addEventListener("DOMContentLoaded", () => {
       const owner = localStorage.getItem("gh_owner") || "";
@@ -692,7 +750,8 @@
 
         allPosts = posts;
         selectedDateStr = dateVal;
-        renderAll();
+        isSwappedView = false;
+        renderAll(true);
 
         statusEl.textContent = "完了しました！（サイト反映には数十秒かかる場合があります）";
         setTimeout(() => {
@@ -719,15 +778,16 @@
       if (allPosts.length > 0 && !selectedDateStr) {
         selectedDateStr = allPosts[0].date;
       }
-      renderAll();
+      renderAll(false);
     }
 
-    function renderAll() {
-      renderLeftFeatured();
+    function renderAll(withFade = true) {
+      renderLeftFeatured(withFade);
       renderRightCalendar();
     }
 
-    function renderLeftFeatured() {
+    // 左ペインの描画（フェード＆小窓ドラッグ対応）
+    function renderLeftFeatured(withFade = true) {
       const dateEl = document.getElementById("featDate");
       const cardEl = document.getElementById("featCard");
       const memoEl = document.getElementById("featMemo");
@@ -741,27 +801,124 @@
         return;
       }
 
-      const [y, m, d] = post.date.split("-");
-      dateEl.textContent = `${Number(m)}/${Number(d)}`;
-      memoEl.textContent = post.memo || "";
+      const mainSrc = isSwappedView ? post.back : post.front;
+      const subSrc = isSwappedView ? post.front : post.back;
 
-      cardEl.innerHTML = `
-        <img class="main-img" src="${post.front}" alt="main" />
-        <div class="sub-pip" title="クリックで表と裏を入れ替え">
-          <img src="${post.back}" alt="sub" />
-        </div>
-      `;
+      const applyContent = () => {
+        const [, m, d] = post.date.split("-");
+        dateEl.textContent = `${Number(m)}/${Number(d)}`;
+        memoEl.textContent = post.memo || "";
 
-      const mainImg = cardEl.querySelector(".main-img");
-      const subPip = cardEl.querySelector(".sub-pip");
-      const subImg = subPip.querySelector("img");
-      subPip.addEventListener("click", () => {
-        const tmp = mainImg.src;
-        mainImg.src = subImg.src;
-        subImg.src = tmp;
-      });
+        cardEl.innerHTML = `
+          <img class="main-img" src="${mainSrc}" alt="main" />
+          <div class="sub-pip" title="ドラッグで移動・クリックで表裏入れ替え">
+            <img src="${subSrc}" alt="sub" />
+          </div>
+        `;
+
+        const subPip = cardEl.querySelector(".sub-pip");
+        if (customPipPos) {
+          subPip.style.left = `${customPipPos.left}px`;
+          subPip.style.top = `${customPipPos.top}px`;
+          subPip.style.right = "auto";
+        }
+
+        setupPipDragAndSwap(cardEl, subPip);
+      };
+
+      if (withFade) {
+        const prevMain = cardEl.querySelector(".main-img");
+        const prevSub = cardEl.querySelector(".sub-pip img");
+        if (prevMain) prevMain.classList.add("fading");
+        if (prevSub) prevSub.classList.add("fading");
+        memoEl.classList.add("fading");
+
+        setTimeout(() => {
+          applyContent();
+          const nextMain = cardEl.querySelector(".main-img");
+          const nextSub = cardEl.querySelector(".sub-pip img");
+          requestAnimationFrame(() => {
+            if (nextMain) nextMain.classList.remove("fading");
+            if (nextSub) nextSub.classList.remove("fading");
+            memoEl.classList.remove("fading");
+          });
+        }, 140);
+      } else {
+        applyContent();
+      }
     }
 
+    // 小窓のドラッグ＆ドロップ移動と、クリック時のフェード入れ替え
+    function setupPipDragAndSwap(cardEl, subPip) {
+      let dragging = false;
+      let movedDistance = 0;
+      let startX = 0;
+      let startY = 0;
+      let originLeft = 0;
+      let originTop = 0;
+
+      const onPointerDown = (e) => {
+        e.preventDefault();
+        const cardRect = cardEl.getBoundingClientRect();
+        const pipRect = subPip.getBoundingClientRect();
+
+        startX = e.clientX;
+        startY = e.clientY;
+        originLeft = pipRect.left - cardRect.left;
+        originTop = pipRect.top - cardRect.top;
+        movedDistance = 0;
+        dragging = true;
+
+        subPip.style.left = `${originLeft}px`;
+        subPip.style.top = `${originTop}px`;
+        subPip.style.right = "auto";
+        subPip.classList.add("dragging");
+        subPip.setPointerCapture(e.pointerId);
+      };
+
+      const onPointerMove = (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        movedDistance = Math.hypot(dx, dy);
+
+        const cardRect = cardEl.getBoundingClientRect();
+        const pipRect = subPip.getBoundingClientRect();
+        const pad = 8;
+
+        const maxLeft = Math.max(pad, cardRect.width - pipRect.width - pad);
+        const maxTop = Math.max(pad, cardRect.height - pipRect.height - pad);
+
+        const nextLeft = Math.min(maxLeft, Math.max(pad, originLeft + dx));
+        const nextTop = Math.min(maxTop, Math.max(pad, originTop + dy));
+
+        subPip.style.left = `${nextLeft}px`;
+        subPip.style.top = `${nextTop}px`;
+        customPipPos = { left: nextLeft, top: nextTop };
+      };
+
+      const onPointerUp = (e) => {
+        if (!dragging) return;
+        dragging = false;
+        subPip.classList.remove("dragging");
+        if (subPip.hasPointerCapture(e.pointerId)) {
+          subPip.releasePointerCapture(e.pointerId);
+        }
+
+        // ほとんど動かさずに離した場合は「クリック」として表裏をフェード切り替え
+        if (movedDistance < 6) {
+          isSwappedView = !isSwappedView;
+          renderLeftFeatured(true);
+        }
+      };
+
+      subPip.addEventListener("pointerdown", onPointerDown);
+      subPip.addEventListener("pointermove", onPointerMove);
+      subPip.addEventListener("pointerup", onPointerUp);
+      subPip.addEventListener("pointercancel", onPointerUp);
+    }
+
+    // 右ペイン（年→月の降順カレンダー）の描画
     function renderRightCalendar() {
       const container = document.getElementById("archiveContainer");
       container.innerHTML = "";
@@ -824,7 +981,8 @@
               `;
               thumb.addEventListener("click", () => {
                 selectedDateStr = dateKey;
-                renderAll();
+                isSwappedView = false;
+                renderAll(true);
                 if (window.innerWidth <= 860) {
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }
