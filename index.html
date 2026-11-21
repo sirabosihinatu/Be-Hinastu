@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Be Hinatsu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@900&family=Noto+Sans+JP:wght@700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #000000;
+      --panel: #121215;
+      --border: #26262c;
+      --text: #ffffff;
+      --muted: #8e8e98;
+      --font-en: "Inter", "Noto Sans JP", sans-serif;
+      --font-jp: "Noto Sans JP", "Inter", sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-jp);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* 英数字・見出し・日付用のInter Black */
+    .font-en {
+      font-family: var(--font-en);
+      font-weight: 900;
+    }
+
+    /* 画面端まで使う2カラムレイアウト */
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      width: 100%;
+      min-height: 100vh;
+      padding: 24px 28px;
+      gap: 36px;
+    }
+
+    /* 左カラム（固定プレビュー） */
+    .left-pane {
+      position: sticky;
+      top: 24px;
+      height: fit-content;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .brand {
+      align-self: flex-start;
+      font-family: var(--font-en);
+      font-weight: 900;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+      margin-bottom: 20px;
+    }
+    .featured-date {
+      font-family: var(--font-en);
+      font-weight: 900;
+      font-size: 2.1rem;
+      letter-spacing: 0.01em;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    .featured-card {
+      position: relative;
+      width: 240px;
+      aspect-ratio: 9 / 17.5;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #0d0d10;
+      border: 1px solid #1f1f24;
+      user-select: none;
+    }
+    .featured-card .main-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    /* 右上配置のワイプ小窓 */
+    .featured-card .sub-pip {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 34%;
+      aspect-ratio: 9 / 17;
+      border-radius: 9px;
+      overflow: hidden;
+      border: 2px solid #000000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.75);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .featured-card .sub-pip:hover {
+      transform: scale(1.04);
+    }
+    .featured-card .sub-pip img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .featured-empty {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-family: var(--font-en);
+      font-weight: 900;
+      font-size: 0.85rem;
+    }
+    .featured-memo {
+      margin-top: 12px;
+      font-family: var(--font-jp);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #e4e4e8;
+      text-align: center;
+      max-width: 240px;
+      line-height: 1.4;
+      min-height: 1.4em;
+    }
+
+    /* 右カラム（カレンダーアーカイブ） */
+    .right-pane {
+      position: relative;
+      width: 100%;
+      padding-bottom: 64px;
+      padding-right: 64px;
+    }
+    .top-actions {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      display: flex;
+      gap: 10px;
+      z-index: 50;
+    }
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #232329;
+      border: 1px solid #32323a;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.15s;
+    }
+    .icon-btn:hover {
+      background: #32323b;
+      transform: scale(1.05);
+    }
+    .icon-btn svg {
+      width: 19px;
+      height: 19px;
+    }
+
+    .year-block {
+      margin-bottom: 44px;
+    }
+    .year-title {
+      font-family: var(--font-en);
+      font-weight: 900;
+      font-size: 2.1rem;
+      margin-bottom: 16px;
+      letter-spacing: 0.01em;
+    }
+    .month-block {
+      margin-bottom: 40px;
+    }
+    .month-title {
+      font-family: var(--font-jp);
+      font-weight: 900;
+      font-size: 1.65rem;
+      margin-bottom: 18px;
+    }
+    .month-num {
+      font-family: var(--font-en);
+      font-weight: 900;
+    }
+
+    /* 7列カレンダーグリッド（端から端まで自然に展開） */
+    .days-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      column-gap: 16px;
+      row-gap: 18px;
+      width: 100%;
+    }
+    .day-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .day-thumb {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 9 / 17.5;
+      border-radius: 7px;
+      background: #060608;
+      border: 1px solid #16161b;
+      overflow: hidden;
+    }
+    .day-thumb.has-post {
+      cursor: pointer;
+      border-color: #26262e;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .day-thumb.has-post:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(255, 255, 255, 0.12);
+    }
+    .day-thumb.active {
+      outline: 2px solid #ffffff;
+      outline-offset: 2px;
+    }
+    .day-thumb .t-main {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .day-thumb .t-sub {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 34%;
+      aspect-ratio: 9 / 17;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid #000000;
+    }
+    .day-thumb .t-sub img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .day-num {
+      font-family: var(--font-en);
+      font-weight: 900;
+      font-size: 0.85rem;
+      color: #e4e4e8;
+    }
+
+    /* モーダル（ログイン・投稿） */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 16px;
+    }
+    .modal-backdrop.open {
+      display: flex;
+    }
+    .modal {
+      background: #141418;
+      border: 1px solid #2b2b34;
+      border-radius: 18px;
+      width: 100%;
+      max-width: 420px;
+      padding: 24px;
+      font-family: var(--font-jp);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .modal-header h2 {
+      font-family: var(--font-jp);
+      font-size: 1.1rem;
+      font-weight: 900;
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+    .field {
+      margin-bottom: 14px;
+    }
+    .field label {
+      display: block;
+      font-family: var(--font-jp);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .field input[type="text"],
+    .field input[type="password"],
+    .field input[type="date"] {
+      width: 100%;
+      background: #09090b;
+      border: 1px solid #2a2a33;
+      color: #ffffff;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-family: var(--font-jp);
+      font-size: 0.9rem;
+    }
+    .file-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .file-box {
+      background: #09090b;
+      border: 1px dashed #32323d;
+      border-radius: 12px;
+      padding: 14px 8px;
+      text-align: center;
+      font-family: var(--font-jp);
+      font-size: 0.8rem;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .file-box.ready {
+      border-color: #4ade80;
+      color: #4ade80;
+    }
+    .file-box input { display: none; }
+
+    .btn-primary {
+      width: 100%;
+      background: #ffffff;
+      color: #000000;
+      border: none;
+      padding: 11px;
+      border-radius: 10px;
+      font-family: var(--font-jp);
+      font-weight: 900;
+      font-size: 0.92rem;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn-sub {
+      background: #222229;
+      color: #ffffff;
+      border: 1px solid #32323d;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-family: var(--font-jp);
+      font-weight: 700;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .status-msg {
+      margin-top: 10px;
+      font-family: var(--font-jp);
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* スマホ表示対応 */
+    @media (max-width: 860px) {
+      .layout {
+        grid-template-columns: 1fr;
+        padding: 16px 12px;
+        gap: 28px;
+      }
+      .left-pane {
+        position: static;
+      }
+      .right-pane {
+        padding-right: 0;
+      }
+      .days-grid {
+        grid-template-columns: repeat(7, 1fr);
+        column-gap: 6px;
+        row-gap: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 右上の鍵アイコン（ログイン済みの場合は投稿ボタンも表示） -->
+  <div class="top-actions">
+    <button class="icon-btn" id="postTriggerBtn" style="display:none;" title="写真をアップロード" onclick="openModal('postModal')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    </button>
+    <button class="icon-btn" id="keyTriggerBtn" title="ログイン / GitHub設定" onclick="openModal('loginModal')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="15.5" cy="8.5" r="4.5"></circle>
+        <path d="M12.3 11.7L4 20"></path>
+        <path d="M6 18l2 2"></path>
+        <path d="M8.5 15.5l2 2"></path>
+      </svg>
+    </button>
+  </div>
+
+  <div class="layout">
+    <!-- 左カラム：最新または選択した写真 -->
+    <aside class="left-pane">
+      <div class="brand">Be Hinatsu</div>
+      <div class="featured-date" id="featDate">--/--</div>
+      <div class="featured-card" id="featCard">
+        <div class="featured-empty">No Photo</div>
+      </div>
+      <div class="featured-memo" id="featMemo"></div>
+    </aside>
+
+    <!-- 右カラム：年・月ごとのカレンダー一覧 -->
+    <main class="right-pane" id="archiveContainer"></main>
+  </div>
+
+  <!-- ログイン（GitHub接続設定）モーダル -->
+  <div class="modal-backdrop" id="loginModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>ログイン（GitHub連携）</h2>
+        <button class="close-btn" onclick="closeModal('loginModal')">&times;</button>
+      </div>
+      <div class="field">
+        <label>GitHub ユーザー名</label>
+        <input type="text" id="cfgOwner" placeholder="例: hinatsu-vrc" />
+      </div>
+      <div class="field">
+        <label>リポジトリ名</label>
+        <input type="text" id="cfgRepo" placeholder="例: be-hinatsu" />
+      </div>
+      <div class="field">
+        <label>Personal Access Token</label>
+        <input type="password" id="cfgToken" placeholder="github_pat_..." />
+      </div>
+      <button class="btn-primary" onclick="saveLogin()">ログイン情報を保存</button>
+      <p class="status-msg" id="loginStatus"></p>
+    </div>
+  </div>
+
+  <!-- 投稿モーダル -->
+  <div class="modal-backdrop" id="postModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>写真をアップロード</h2>
+        <button class="close-btn" onclick="closeModal('postModal')">&times;</button>
+      </div>
+      <div class="field">
+        <label>日付（PNGのファイル名から自動入力されます）</label>
+        <input type="date" id="postDate" />
+      </div>
+      <div class="file-row">
+        <label class="file-box" id="frontLabel">
+          <strong>表（メイン）</strong><br /><span id="frontName">PNGを選択</span>
+          <input type="file" id="frontInput" accept="image/*" onchange="handleFileSelect('front')" />
+        </label>
+        <label class="file-box" id="backLabel">
+          <strong>裏（右上小窓）</strong><br /><span id="backName">PNGを選択</span>
+          <input type="file" id="backInput" accept="image/*" onchange="handleFileSelect('back')" />
+        </label>
+      </div>
+      <div style="text-align:right; margin-bottom:12px;">
+        <button type="button" class="btn-sub" onclick="swapUploadSides()">⇄ 表と裏を入れ替え</button>
+      </div>
+      <div class="field">
+        <label>今日の一言</label>
+        <input type="text" id="postMemo" placeholder="例: （今日の一言）" />
+      </div>
+      <button class="btn-primary" id="uploadBtn" onclick="uploadPost()">アップロード</button>
+      <p class="status-msg" id="uploadStatus"></p>
+    </div>
+  </div>
+
+  <script>
+    let allPosts = [];
+    let selectedDateStr = null;
+    let frontDataUrl = null;
+    let backDataUrl = null;
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const owner = localStorage.getItem("gh_owner") || "";
+      const repo = localStorage.getItem("gh_repo") || "";
+      const token = localStorage.getItem("gh_token") || "";
+
+      document.getElementById("cfgOwner").value = owner;
+      document.getElementById("cfgRepo").value = repo;
+      document.getElementById("cfgToken").value = token;
+
+      const today = new Date();
+      document.getElementById("postDate").value = formatDateISO(today);
+
+      updateAuthUI();
+      loadPosts();
+    });
+
+    function formatDateISO(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    function updateAuthUI() {
+      const loggedIn = Boolean(
+        localStorage.getItem("gh_owner") &&
+        localStorage.getItem("gh_repo") &&
+        localStorage.getItem("gh_token")
+      );
+      document.getElementById("postTriggerBtn").style.display = loggedIn ? "flex" : "none";
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.add("open");
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove("open");
+    }
+
+    function saveLogin() {
+      localStorage.setItem("gh_owner", document.getElementById("cfgOwner").value.trim());
+      localStorage.setItem("gh_repo", document.getElementById("cfgRepo").value.trim());
+      localStorage.setItem("gh_token", document.getElementById("cfgToken").value.trim());
+      document.getElementById("loginStatus").textContent = "ログイン情報を保存しました。";
+      updateAuthUI();
+      setTimeout(() => {
+        closeModal("loginModal");
+        openModal("postModal");
+      }, 600);
+    }
+
+    function compressImage(file, maxWidth = 1080, quality = 0.85) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const scale = Math.min(1, maxWidth / img.width);
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL("image/webp", quality));
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function extractDateFromFilename(name) {
+      const m = name.match(/(\d{4}-\d{2}-\d{2})/);
+      return m ? m[1] : null;
+    }
+
+    async function handleFileSelect(side) {
+      const input = document.getElementById(side === "front" ? "frontInput" : "backInput");
+      const file = input.files[0];
+      if (!file) return;
+
+      const parsed = extractDateFromFilename(file.name);
+      if (parsed) {
+        document.getElementById("postDate").value = parsed;
+      }
+
+      const dataUrl = await compressImage(file);
+      if (side === "front") {
+        frontDataUrl = dataUrl;
+        document.getElementById("frontName").textContent = "選択完了 ✓";
+        document.getElementById("frontLabel").classList.add("ready");
+      } else {
+        backDataUrl = dataUrl;
+        document.getElementById("backName").textContent = "選択完了 ✓";
+        document.getElementById("backLabel").classList.add("ready");
+      }
+    }
+
+    function swapUploadSides() {
+      if (!frontDataUrl && !backDataUrl) return;
+      [frontDataUrl, backDataUrl] = [backDataUrl, frontDataUrl];
+      document.getElementById("frontName").textContent = frontDataUrl ? "選択完了 ✓" : "PNGを選択";
+      document.getElementById("backName").textContent = backDataUrl ? "選択完了 ✓" : "PNGを選択";
+      document.getElementById("frontLabel").classList.toggle("ready", Boolean(frontDataUrl));
+      document.getElementById("backLabel").classList.toggle("ready", Boolean(backDataUrl));
+    }
+
+    async function githubRequest(path, method = "GET", body = null) {
+      const owner = localStorage.getItem("gh_owner");
+      const repo = localStorage.getItem("gh_repo");
+      const token = localStorage.getItem("gh_token");
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Accept": "application/vnd.github+json",
+          "Authorization": `Bearer ${token}`,
+          "X-GitHub-Api-Version": "2022-11-28"
+        },
+        body: body ? JSON.stringify(body) : null
+      });
+      if (!res.ok && res.status !== 404) {
+        throw new Error(`GitHub API Error (${res.status})`);
+      }
+      return res.status === 404 ? null : await res.json();
+    }
+
+    async function uploadPost() {
+      const statusEl = document.getElementById("uploadStatus");
+      const dateVal = document.getElementById("postDate").value;
+      const memoVal = document.getElementById("postMemo").value.trim();
+
+      if (!dateVal) {
+        statusEl.textContent = "日付を選択してください。";
+        return;
+      }
+      if (!frontDataUrl || !backDataUrl) {
+        statusEl.textContent = "表と裏の2枚の画像を選択してください。";
+        return;
+      }
+
+      const btn = document.getElementById("uploadBtn");
+      btn.disabled = true;
+
+      try {
+        const stamp = Date.now();
+        const frontPath = `photos/${dateVal}_${stamp}_front.webp`;
+        const backPath = `photos/${dateVal}_${stamp}_back.webp`;
+
+        statusEl.textContent = "1/3 表の画像をアップロード中...";
+        await githubRequest(frontPath, "PUT", {
+          message: `Upload front ${dateVal}`,
+          content: frontDataUrl.split(",")[1]
+        });
+
+        statusEl.textContent = "2/3 裏の画像をアップロード中...";
+        await githubRequest(backPath, "PUT", {
+          message: `Upload back ${dateVal}`,
+          content: backDataUrl.split(",")[1]
+        });
+
+        statusEl.textContent = "3/3 カレンダーデータを更新中...";
+        const existing = await githubRequest("posts.json");
+        let posts = [];
+        let sha = null;
+
+        if (existing && existing.content) {
+          sha = existing.sha;
+          const decoded = decodeURIComponent(escape(atob(existing.content.replace(/\n/g, ""))));
+          posts = JSON.parse(decoded);
+        }
+
+        posts = posts.filter((p) => p.date !== dateVal);
+        posts.push({
+          date: dateVal,
+          front: frontPath,
+          back: backPath,
+          memo: memoVal
+        });
+
+        posts.sort((a, b) => b.date.localeCompare(a.date));
+
+        const jsonStr = JSON.stringify(posts, null, 2);
+        const encodedJson = btoa(unescape(encodeURIComponent(jsonStr)));
+
+        await githubRequest("posts.json", "PUT", {
+          message: `Update posts.json (${dateVal})`,
+          content: encodedJson,
+          ...(sha ? { sha } : {})
+        });
+
+        allPosts = posts;
+        selectedDateStr = dateVal;
+        renderAll();
+
+        statusEl.textContent = "完了しました！（サイト反映には数十秒かかる場合があります）";
+        setTimeout(() => {
+          closeModal("postModal");
+          statusEl.textContent = "";
+        }, 1200);
+      } catch (err) {
+        statusEl.textContent = `エラー: ${err.message}`;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function loadPosts() {
+      try {
+        const res = await fetch(`posts.json?t=${Date.now()}`);
+        if (res.ok) {
+          allPosts = await res.json();
+          allPosts.sort((a, b) => b.date.localeCompare(a.date));
+        }
+      } catch (e) {
+        allPosts = [];
+      }
+      if (allPosts.length > 0 && !selectedDateStr) {
+        selectedDateStr = allPosts[0].date;
+      }
+      renderAll();
+    }
+
+    function renderAll() {
+      renderLeftFeatured();
+      renderRightCalendar();
+    }
+
+    function renderLeftFeatured() {
+      const dateEl = document.getElementById("featDate");
+      const cardEl = document.getElementById("featCard");
+      const memoEl = document.getElementById("featMemo");
+
+      const post = allPosts.find((p) => p.date === selectedDateStr) || allPosts[0];
+      if (!post) {
+        const now = new Date();
+        dateEl.textContent = `${now.getMonth() + 1}/${now.getDate()}`;
+        cardEl.innerHTML = `<div class="featured-empty">No Photo</div>`;
+        memoEl.textContent = "（今日の一言）";
+        return;
+      }
+
+      const [y, m, d] = post.date.split("-");
+      dateEl.textContent = `${Number(m)}/${Number(d)}`;
+      memoEl.textContent = post.memo || "";
+
+      cardEl.innerHTML = `
+        <img class="main-img" src="${post.front}" alt="main" />
+        <div class="sub-pip" title="クリックで表と裏を入れ替え">
+          <img src="${post.back}" alt="sub" />
+        </div>
+      `;
+
+      const mainImg = cardEl.querySelector(".main-img");
+      const subPip = cardEl.querySelector(".sub-pip");
+      const subImg = subPip.querySelector("img");
+      subPip.addEventListener("click", () => {
+        const tmp = mainImg.src;
+        mainImg.src = subImg.src;
+        subImg.src = tmp;
+      });
+    }
+
+    function renderRightCalendar() {
+      const container = document.getElementById("archiveContainer");
+      container.innerHTML = "";
+
+      const postMap = new Map(allPosts.map((p) => [p.date, p]));
+
+      const ymSet = new Set();
+      const now = new Date();
+      ymSet.add(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+      allPosts.forEach((p) => {
+        ymSet.add(p.date.slice(0, 7));
+      });
+
+      const sortedYMs = Array.from(ymSet).sort((a, b) => b.localeCompare(a));
+
+      const yearGroups = new Map();
+      sortedYMs.forEach((ym) => {
+        const [year, month] = ym.split("-");
+        if (!yearGroups.has(year)) yearGroups.set(year, []);
+        yearGroups.get(year).push(Number(month));
+      });
+
+      yearGroups.forEach((months, year) => {
+        const yearSection = document.createElement("section");
+        yearSection.className = "year-block";
+
+        const yearH = document.createElement("h2");
+        yearH.className = "year-title";
+        yearH.textContent = year;
+        yearSection.appendChild(yearH);
+
+        months.forEach((monthNum) => {
+          const monthSection = document.createElement("div");
+          monthSection.className = "month-block";
+
+          const monthH = document.createElement("h3");
+          monthH.className = "month-title";
+          monthH.innerHTML = `<span class="month-num">${monthNum}</span>月`;
+          monthSection.appendChild(monthH);
+
+          const grid = document.createElement("div");
+          grid.className = "days-grid";
+
+          const daysInMonth = new Date(Number(year), monthNum, 0).getDate();
+
+          for (let day = 1; day <= daysInMonth; day++) {
+            const dateKey = `${year}-${String(monthNum).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+            const post = postMap.get(dateKey);
+
+            const cell = document.createElement("div");
+            cell.className = "day-cell";
+
+            const thumb = document.createElement("div");
+            thumb.className = "day-thumb" + (post ? " has-post" : "") + (dateKey === selectedDateStr ? " active" : "");
+
+            if (post) {
+              thumb.innerHTML = `
+                <img class="t-main" src="${post.front}" alt="${dateKey}" loading="lazy" />
+                <div class="t-sub"><img src="${post.back}" alt="" loading="lazy" /></div>
+              `;
+              thumb.addEventListener("click", () => {
+                selectedDateStr = dateKey;
+                renderAll();
+                if (window.innerWidth <= 860) {
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              });
+            }
+
+            const num = document.createElement("div");
+            num.className = "day-num";
+            num.textContent = day;
+
+            cell.appendChild(thumb);
+            cell.appendChild(num);
+            grid.appendChild(cell);
+          }
+
+          monthSection.appendChild(grid);
+          yearSection.appendChild(monthSection);
+        });
+
+        container.appendChild(yearSection);
+      });
+    }
+  </script>
+</body>
+</html>
