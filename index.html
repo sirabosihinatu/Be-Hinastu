@@ -1,12 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-N9Q445M3"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Be Hinatsu</title>
@@ -25,7 +19,6 @@
       --card-w: 240px;
     }
 
-    /* 広い全画面表示ではオレンジ枠に合わせて左カードを大きく拡大 */
     @media (min-width: 1100px) {
       :root {
         --card-w: 340px;
@@ -41,7 +34,6 @@
       overflow-x: hidden;
     }
 
-    /* 画面端まで使う2カラムレイアウト */
     .layout {
       display: grid;
       grid-template-columns: calc(var(--card-w) + 64px) 1fr;
@@ -51,7 +43,6 @@
       gap: 32px;
     }
 
-    /* 左カラム（固定プレビュー） */
     .left-pane {
       position: sticky;
       top: 24px;
@@ -101,7 +92,6 @@
       opacity: 0.15;
     }
 
-    /* 右上初期配置・ドラッグ移動可能なワイプ小窓 */
     .featured-card .sub-pip {
       position: absolute;
       top: 12px;
@@ -163,12 +153,11 @@
       opacity: 0.2;
     }
 
-    /* 右カラム（カレンダーアーカイブ） */
     .right-pane {
       position: relative;
       width: 100%;
       padding-bottom: 64px;
-      padding-right: 96px;
+      padding-right: 148px;
     }
     .top-actions {
       position: fixed;
@@ -182,23 +171,32 @@
       width: 42px;
       height: 42px;
       border-radius: 50%;
-      background: rgba(35, 35, 41, 0.82);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      color: #ffffff;
+      background: #232327;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #e5e5ea;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: background 0.15s, transform 0.15s;
+      transition: background 0.18s ease, color 0.18s ease, transform 0.15s ease;
     }
     .icon-btn:hover {
-      background: rgba(56, 56, 66, 0.92);
+      background: #323238;
       transform: scale(1.05);
     }
     .icon-btn svg {
-      width: 19px;
-      height: 19px;
+      width: 20px;
+      height: 20px;
+    }
+
+    /* ベル許可状態（白背景＋黒ベル） */
+    .icon-btn.bell-enabled {
+      background: #d4d4d8;
+      color: #09090b;
+      border-color: #ffffff;
+    }
+    .icon-btn.bell-enabled:hover {
+      background: #e4e4e7;
     }
 
     .year-block {
@@ -225,7 +223,6 @@
       font-weight: 900;
     }
 
-    /* 7列カレンダーグリッド（端から端まで自然に展開） */
     .days-grid {
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -267,7 +264,6 @@
         0 8px 22px rgba(255, 255, 255, 0.06);
     }
 
-    /* 撮影済み日 */
     .day-thumb.has-post {
       background: #09090c;
       backdrop-filter: none;
@@ -313,7 +309,7 @@
       color: #e4e4e8;
     }
 
-    /* モーダル（ログイン・投稿） */
+    /* モーダル（通知確認・ログイン・投稿） */
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -401,6 +397,11 @@
     }
     .file-box input { display: none; }
 
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
     .btn-primary {
       width: 100%;
       background: #ffffff;
@@ -412,11 +413,22 @@
       font-weight: 900;
       font-size: 0.92rem;
       cursor: pointer;
-      margin-top: 4px;
     }
     .btn-primary:disabled {
       opacity: 0.4;
       cursor: not-allowed;
+    }
+    .btn-secondary {
+      width: 100%;
+      background: #23232a;
+      color: #ffffff;
+      border: 1px solid #353540;
+      padding: 11px;
+      border-radius: 10px;
+      font-family: var(--font-jp);
+      font-weight: 700;
+      font-size: 0.88rem;
+      cursor: pointer;
     }
     .btn-sub {
       background: #222229;
@@ -429,6 +441,27 @@
       font-size: 0.78rem;
       cursor: pointer;
     }
+    .notif-lead {
+      font-size: 0.95rem;
+      font-weight: 700;
+      line-height: 1.6;
+      color: #f4f4f6;
+    }
+    .notif-highlight {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      font-size: 0.95rem;
+      font-weight: 900;
+      text-align: center;
+      display: none;
+    }
+    .notif-highlight.show {
+      display: block;
+    }
     .status-msg {
       margin-top: 10px;
       font-family: var(--font-jp);
@@ -437,7 +470,6 @@
       text-align: center;
     }
 
-    /* スマホ表示対応 */
     @media (max-width: 860px) {
       :root {
         --card-w: 240px;
@@ -463,8 +495,11 @@
 </head>
 <body>
 
-  <!-- 右上の鍵アイコン（ログイン済みの場合は投稿ボタンも表示） -->
+  <!-- 右上アクションボタン（ベル・投稿・鍵） -->
   <div class="top-actions">
+    <button class="icon-btn" id="bellTriggerBtn" title="通知設定" onclick="openBellModal()">
+      <!-- JSで許可状態に応じてベルSVGを切り替えます -->
+    </button>
     <button class="icon-btn" id="postTriggerBtn" style="display:none;" title="写真をアップロード" onclick="openModal('postModal')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
         <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -482,7 +517,6 @@
   </div>
 
   <div class="layout">
-    <!-- 左カラム：最新または選択した写真 -->
     <aside class="left-pane">
       <div class="brand">Be Hinatsu</div>
       <div class="featured-date" id="featDate">--/--</div>
@@ -492,8 +526,26 @@
       <div class="featured-memo" id="featMemo"></div>
     </aside>
 
-    <!-- 右カラム：年・月ごとのカレンダー一覧 -->
     <main class="right-pane" id="archiveContainer"></main>
+  </div>
+
+  <!-- 通知許可確認モーダル -->
+  <div class="modal-backdrop" id="bellModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>通知を許可しますか？</h2>
+        <button class="close-btn" onclick="closeModal('bellModal')">&times;</button>
+      </div>
+      <p class="notif-lead" id="bellLeadText">
+        新しい写真が投稿されたときに通知を受け取るには、ブラウザの通知権限を許可してください。
+      </p>
+      <div class="notif-highlight" id="bellReadyBanner">更新が来しだい通知します！！</div>
+      <div class="modal-actions" id="bellActionButtons">
+        <button type="button" class="btn-secondary" onclick="closeModal('bellModal')">受け取らない</button>
+        <button type="button" class="btn-primary" id="allowNotifBtn" onclick="requestNotificationPermission()">許可する</button>
+      </div>
+      <p class="status-msg" id="bellStatus"></p>
+    </div>
   </div>
 
   <!-- ログイン（GitHub接続設定）モーダル -->
@@ -559,9 +611,11 @@
     let frontDataUrl = null;
     let backDataUrl = null;
 
-    // 小窓のカスタム位置（nullのときはCSSの右上デフォルト位置）
-    let customPipPos = null; // { left: number, top: number }
+    let customPipPos = null;
     let isSwappedView = false;
+
+    // 通知トグル状態（ブラウザ権限がgrantedかつユーザーが有効にしているか）
+    let notifyEnabled = false;
 
     window.addEventListener("DOMContentLoaded", () => {
       const owner = localStorage.getItem("gh_owner") || "";
@@ -575,9 +629,164 @@
       const today = new Date();
       document.getElementById("postDate").value = formatDateISO(today);
 
+      syncNotificationState();
       updateAuthUI();
       loadPosts();
+
+      // 定期的に新着投稿を確認
+      setInterval(() => {
+        checkNewPostsForNotification();
+      }, 60000);
     });
+
+    function syncNotificationState() {
+      const savedPref = localStorage.getItem("be_hinatsu_notify_enabled") === "true";
+      if ("Notification" in window && Notification.permission === "granted" && savedPref) {
+        notifyEnabled = true;
+      } else {
+        notifyEnabled = false;
+      }
+      renderBellButton();
+    }
+
+    function renderBellButton() {
+      const btn = document.getElementById("bellTriggerBtn");
+      btn.classList.toggle("bell-enabled", notifyEnabled);
+
+      if (notifyEnabled) {
+        // 通知許可状態：白背景・黒ベル・左右に音波（鳴動線）
+        btn.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5.2 6.5A8.5 8.5 0 0 0 3.5 12"></path>
+            <path d="M18.8 6.5A8.5 8.5 0 0 1 20.5 12"></path>
+            <path d="M7.5 16V11a4.5 4.5 0 0 1 9 0v5l1.5 2H6l1.5-2Z"></path>
+            <path d="M10 18a2 2 0 0 0 4 0"></path>
+          </svg>
+        `;
+      } else {
+        // 未許可・オフ状態：ダーク背景・静かなベル
+        btn.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7.5 16V11a4.5 4.5 0 0 1 9 0v5l1.5 2H6l1.5-2Z"></path>
+            <path d="M10 18a2 2 0 0 0 4 0"></path>
+          </svg>
+        `;
+      }
+    }
+
+    function openBellModal() {
+      const banner = document.getElementById("bellReadyBanner");
+      const status = document.getElementById("bellStatus");
+      const lead = document.getElementById("bellLeadText");
+      const actions = document.getElementById("bellActionButtons");
+
+      status.textContent = "";
+
+      if (!("Notification" in window)) {
+        banner.classList.remove("show");
+        actions.style.display = "none";
+        lead.textContent = "お使いのブラウザは通知機能に対応していません。";
+        openModal("bellModal");
+        return;
+      }
+
+      if (notifyEnabled && Notification.permission === "granted") {
+        lead.textContent = "現在、通知は許可されています。";
+        banner.textContent = "更新が来しだい通知します！！";
+        banner.classList.add("show");
+        actions.innerHTML = `
+          <button type="button" class="btn-secondary" onclick="disableNotification()">通知をオフにする</button>
+          <button type="button" class="btn-primary" onclick="closeModal('bellModal')">閉じる</button>
+        `;
+        actions.style.display = "flex";
+      } else {
+        lead.textContent = "通知を許可しますか？権限を許可すると、新しい写真が追加されたときに通知をお知らせします。";
+        banner.classList.remove("show");
+        actions.innerHTML = `
+          <button type="button" class="btn-secondary" onclick="closeModal('bellModal')">受け取らない</button>
+          <button type="button" class="btn-primary" id="allowNotifBtn" onclick="requestNotificationPermission()">許可する</button>
+        `;
+        actions.style.display = "flex";
+      }
+
+      openModal("bellModal");
+    }
+
+    async function requestNotificationPermission() {
+      const status = document.getElementById("bellStatus");
+      const banner = document.getElementById("bellReadyBanner");
+
+      if (!("Notification" in window)) {
+        status.textContent = "このブラウザでは通知が利用できません。";
+        return;
+      }
+
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === "granted") {
+          notifyEnabled = true;
+          localStorage.setItem("be_hinatsu_notify_enabled", "true");
+          renderBellButton();
+
+          banner.textContent = "更新が来しだい通知します！！";
+          banner.classList.add("show");
+          status.textContent = "通知が有効になりました。";
+
+          if (allPosts.length > 0) {
+            localStorage.setItem("be_hinatsu_last_seen_date", allPosts[0].date);
+          }
+
+          new Notification("Be Hinatsu", {
+            body: "更新が来しだい通知します！！"
+          });
+        } else if (permission === "denied") {
+          notifyEnabled = false;
+          localStorage.setItem("be_hinatsu_notify_enabled", "false");
+          renderBellButton();
+          banner.classList.remove("show");
+          status.textContent = "ブラウザの設定から通知がブロックされています。アドレスバーのアイコンから通知を許可してください。";
+        } else {
+          notifyEnabled = false;
+          renderBellButton();
+          banner.classList.remove("show");
+          status.textContent = "通知は許可されませんでした。";
+        }
+      } catch (err) {
+        status.textContent = `通知設定エラー: ${err.message}`;
+      }
+    }
+
+    function disableNotification() {
+      notifyEnabled = false;
+      localStorage.setItem("be_hinatsu_notify_enabled", "false");
+      renderBellButton();
+      document.getElementById("bellReadyBanner").classList.remove("show");
+      document.getElementById("bellLeadText").textContent = "通知を受け取らない設定にしました。";
+      document.getElementById("bellActionButtons").innerHTML = `
+        <button type="button" class="btn-primary" onclick="closeModal('bellModal')">閉じる</button>
+      `;
+    }
+
+    async function checkNewPostsForNotification() {
+      if (!notifyEnabled || Notification.permission !== "granted") return;
+      try {
+        const res = await fetch(`posts.json?t=${Date.now()}`);
+        if (!res.ok) return;
+        const latestPosts = await res.json();
+        if (!Array.isArray(latestPosts) || latestPosts.length === 0) return;
+        latestPosts.sort((a, b) => b.date.localeCompare(a.date));
+
+        const newestDate = latestPosts[0].date;
+        const lastSeen = localStorage.getItem("be_hinatsu_last_seen_date");
+
+        if (lastSeen && newestDate > lastSeen) {
+          new Notification("Be Hinatsu", {
+            body: `${newestDate} の新しい写真が更新されました！`
+          });
+        }
+        localStorage.setItem("be_hinatsu_last_seen_date", newestDate);
+      } catch (_) {}
+    }
 
     function formatDateISO(d) {
       const y = d.getFullYear();
@@ -757,6 +966,7 @@
         allPosts = posts;
         selectedDateStr = dateVal;
         isSwappedView = false;
+        localStorage.setItem("be_hinatsu_last_seen_date", allPosts[0].date);
         renderAll(true);
 
         statusEl.textContent = "完了しました！（サイト反映には数十秒かかる場合があります）";
@@ -781,8 +991,13 @@
       } catch (e) {
         allPosts = [];
       }
-      if (allPosts.length > 0 && !selectedDateStr) {
-        selectedDateStr = allPosts[0].date;
+      if (allPosts.length > 0) {
+        if (!selectedDateStr) {
+          selectedDateStr = allPosts[0].date;
+        }
+        if (!localStorage.getItem("be_hinatsu_last_seen_date")) {
+          localStorage.setItem("be_hinatsu_last_seen_date", allPosts[0].date);
+        }
       }
       renderAll(false);
     }
@@ -792,7 +1007,6 @@
       renderRightCalendar();
     }
 
-    // 左ペインの描画（フェード＆小窓ドラッグ対応）
     function renderLeftFeatured(withFade = true) {
       const dateEl = document.getElementById("featDate");
       const cardEl = document.getElementById("featCard");
@@ -854,7 +1068,6 @@
       }
     }
 
-    // 小窓のドラッグ＆ドロップ移動と、クリック時のフェード入れ替え
     function setupPipDragAndSwap(cardEl, subPip) {
       let dragging = false;
       let movedDistance = 0;
@@ -911,7 +1124,6 @@
           subPip.releasePointerCapture(e.pointerId);
         }
 
-        // ほとんど動かさずに離した場合は「クリック」として表裏をフェード切り替え
         if (movedDistance < 6) {
           isSwappedView = !isSwappedView;
           renderLeftFeatured(true);
@@ -924,7 +1136,6 @@
       subPip.addEventListener("pointercancel", onPointerUp);
     }
 
-    // 右ペイン（年→月の降順カレンダー）の描画
     function renderRightCalendar() {
       const container = document.getElementById("archiveContainer");
       container.innerHTML = "";
