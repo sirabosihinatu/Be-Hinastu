@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+    <!-- 基本のファビコン（旧ブラウザ・検索結果用：32x32px または 48x48px） -->
+  <link rel="icon" href="icon/fav.png" sizes="32x32">
+    <!-- iPhone・iPadのホーム画面追加用（180x180px） -->
+  <link rel="apple-touch-icon" href="icon/iOS.png">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Be Hinatsu</title>
@@ -685,7 +689,7 @@
       if (!("Notification" in window)) {
         banner.classList.remove("show");
         actions.style.display = "none";
-        lead.textContent = "お使いのブラウザは通知機能に対応していません。";
+        lead.textContent = "お使いのブラウザは通知機能に対応していません。iPhoneをお使いの場合はSafariからホーム画面に追加してからご利用ください。";
         openModal("bellModal");
         return;
       }
