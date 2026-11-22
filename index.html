@@ -169,6 +169,18 @@
       padding-bottom: 64px;
       padding-right: 148px;
     }
+
+    /* アクセスカウンター表示 */
+    .views-counter {
+      font-family: var(--font-en);
+      font-weight: 900;
+      font-size: 1.35rem;
+      letter-spacing: 0.01em;
+      color: #ffffff;
+      margin-bottom: 14px;
+      min-height: 1.5em;
+    }
+
     .top-actions {
       position: fixed;
       top: 24px;
@@ -629,6 +641,7 @@
     let customPipPos = null;
     let isSwappedView = false;
     let notifyEnabled = false;
+    let currentViewCount = null;
 
     window.addEventListener("DOMContentLoaded", () => {
       const owner = localStorage.getItem("gh_owner") || "";
@@ -642,7 +655,6 @@
       const today = new Date();
       document.getElementById("postDate").value = formatDateISO(today);
 
-      // ページ全体にファイルをドロップしたときに別タブで開かないように防止
       window.addEventListener("dragover", (e) => e.preventDefault());
       window.addEventListener("drop", (e) => e.preventDefault());
 
@@ -651,12 +663,41 @@
 
       syncNotificationState();
       updateAuthUI();
+      loadViewCounter();
       loadPosts();
 
       setInterval(() => {
         checkNewPostsForNotification();
       }, 60000);
     });
+
+    function updateViewsCounterText() {
+      const el = document.getElementById("viewsCounter");
+      if (!el) return;
+      el.textContent = typeof currentViewCount === "number" ? `${currentViewCount} views` : "";
+    }
+
+    async function loadViewCounter() {
+      // ★ここにコピーしたGASのウェブアプリURLを貼り付けます
+      const GAS_COUNTER_URL = "https://script.google.com/macros/s/AKfycbwEShpCN7nifVMJwH9Zp5RFn-0Rcm4LpQEGfP9bbSeYMF60l8pLjE-YZruyBrrHPxFRyQ/exec";
+
+      // ログイン済み（管理者本人）ならカウントを増やさず現在の数字だけ取得
+      const isOwner = Boolean(localStorage.getItem("gh_token"));
+      const fetchUrl = isOwner ? `${GAS_COUNTER_URL}?mode=view` : GAS_COUNTER_URL;
+
+      try {
+        const res = await fetch(fetchUrl);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (typeof data.count === "number") {
+          currentViewCount = data.count;
+          updateViewsCounterText();
+        }
+      } catch (_) {
+        currentViewCount = null;
+        updateViewsCounterText();
+      }
+    }
 
     function setupDropZone(labelId, inputId, side) {
       const label = document.getElementById(labelId);
@@ -697,7 +738,6 @@
           return;
         }
 
-        // input.files にも反映させる
         try {
           const dt = new DataTransfer();
           dt.items.add(file);
@@ -1211,6 +1251,12 @@
     function renderRightCalendar() {
       const container = document.getElementById("archiveContainer");
       container.innerHTML = "";
+
+      const viewsDiv = document.createElement("div");
+      viewsDiv.className = "views-counter";
+      viewsDiv.id = "viewsCounter";
+      viewsDiv.textContent = typeof currentViewCount === "number" ? `${currentViewCount} views` : "";
+      container.appendChild(viewsDiv);
 
       const postMap = new Map(allPosts.map((p) => [p.date, p]));
 
