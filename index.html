@@ -170,20 +170,63 @@
       padding-right: 148px;
     }
 
+    /* Interフォント＆桁ごとの上下スライドアニメーション */
     .views-counter {
-      font-family: var(--font-en);
+      font-family: "Inter", sans-serif;
       font-weight: 900;
       font-size: 1.35rem;
-      letter-spacing: 0.01em;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
       font-variant-numeric: tabular-nums;
       color: #ffffff;
       margin-bottom: 14px;
-      min-height: 1.5em;
-      display: inline-block;
-      transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+      min-height: 1.55rem;
+      display: inline-flex;
+      align-items: center;
     }
-    .views-counter.counting {
-      transform: translateY(-1px);
+    .digit-slot {
+      position: relative;
+      display: inline-block;
+      height: 1.15em;
+      overflow: hidden;
+      vertical-align: bottom;
+    }
+    .digit-char {
+      display: block;
+      height: 1.15em;
+      line-height: 1.15em;
+    }
+    .digit-char.slide-in-up {
+      animation: digitSlideInUp 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .digit-char.slide-out-up {
+      position: absolute;
+      inset: 0;
+      animation: digitSlideOutUp 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .views-suffix {
+      margin-left: 0.32em;
+    }
+
+    @keyframes digitSlideInUp {
+      from {
+        transform: translateY(100%);
+        opacity: 0.25;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    @keyframes digitSlideOutUp {
+      from {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateY(-100%);
+        opacity: 0.25;
+      }
     }
 
     .top-actions {
@@ -651,7 +694,8 @@
     let notifyEnabled = false;
 
     let displayedViewCount = 0;
-    let countRafId = null;
+    let renderedDigitsStr = "";
+    let countTimerId = null;
 
     window.addEventListener("DOMContentLoaded", () => {
       const owner = localStorage.getItem("gh_owner") || "";
@@ -682,51 +726,79 @@
       }, 60000);
     });
 
-    function formatViewsLabel(num) {
-      const safeNum = Math.max(0, Math.floor(Number(num) || 0));
-      return `${safeNum} ${safeNum === 1 ? "view" : "views"}`;
-    }
-
-    function updateViewsCounterText() {
+    function renderViewsCounterDigits(nextCount, animateChangedDigits = false) {
       const el = document.getElementById("viewsCounter");
       if (!el) return;
-      el.textContent = formatViewsLabel(displayedViewCount);
-    }
 
-    function animateCountUp(toValue, duration = 750) {
-      const el = document.getElementById("viewsCounter");
-      const target = Math.max(0, Math.floor(Number(toValue) || 0));
-      const startValue = displayedViewCount;
+      const safeNum = Math.max(0, Math.floor(Number(nextCount) || 0));
+      const nextStr = String(safeNum);
+      const suffixText = safeNum === 1 ? "view" : "views";
 
-      if (countRafId) cancelAnimationFrame(countRafId);
+      const prevStr = renderedDigitsStr;
+      const paddedPrev = prevStr.padStart(nextStr.length, " ");
 
-      if (target === startValue) {
-        displayedViewCount = target;
-        updateViewsCounterText();
+      if (!el.dataset.initialized || !animateChangedDigits) {
+        let html = "";
+        for (let i = 0; i < nextStr.length; i++) {
+          html += `<span class="digit-slot"><span class="digit-char">${nextStr[i]}</span></span>`;
+        }
+        html += `<span class="views-suffix">${suffixText}</span>`;
+        el.innerHTML = html;
+        el.dataset.initialized = "1";
+        renderedDigitsStr = nextStr;
         return;
       }
 
-      if (el) el.classList.add("counting");
-      const startTime = performance.now();
-
-      const step = (now) => {
-        const elapsed = now - startTime;
-        const progress = Math.min(1, elapsed / duration);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        displayedViewCount = Math.round(startValue + (target - startValue) * eased);
-        updateViewsCounterText();
-
-        if (progress < 1) {
-          countRafId = requestAnimationFrame(step);
+      let html = "";
+      for (let i = 0; i < nextStr.length; i++) {
+        const oldCh = paddedPrev[i] === " " ? "" : paddedPrev[i];
+        const newCh = nextStr[i];
+        if (oldCh !== newCh) {
+          const outHtml = oldCh ? `<span class="digit-char slide-out-up">${oldCh}</span>` : "";
+          html += `<span class="digit-slot">${outHtml}<span class="digit-char slide-in-up">${newCh}</span></span>`;
         } else {
-          displayedViewCount = target;
-          updateViewsCounterText();
-          if (el) el.classList.remove("counting");
-          countRafId = null;
+          html += `<span class="digit-slot"><span class="digit-char">${newCh}</span></span>`;
+        }
+      }
+      html += `<span class="views-suffix">${suffixText}</span>`;
+      el.innerHTML = html;
+      renderedDigitsStr = nextStr;
+    }
+
+    function animateCountUp(toValue) {
+      const target = Math.max(0, Math.floor(Number(toValue) || 0));
+      if (countTimerId) {
+        clearTimeout(countTimerId);
+        countTimerId = null;
+      }
+
+      if (target === displayedViewCount) {
+        renderViewsCounterDigits(target, false);
+        return;
+      }
+
+      // ステップ数が多い場合はテンポよく刻んで約600〜800msで完了させる
+      const diff = Math.abs(target - displayedViewCount);
+      const maxSteps = 22;
+      const stepSize = Math.max(1, Math.ceil(diff / maxSteps));
+      const stepDelay = Math.min(75, Math.max(24, Math.round(650 / Math.min(diff, maxSteps))));
+
+      const tick = () => {
+        if (displayedViewCount < target) {
+          displayedViewCount = Math.min(target, displayedViewCount + stepSize);
+        } else {
+          displayedViewCount = Math.max(target, displayedViewCount - stepSize);
+        }
+        renderViewsCounterDigits(displayedViewCount, true);
+
+        if (displayedViewCount !== target) {
+          countTimerId = setTimeout(tick, stepDelay);
+        } else {
+          countTimerId = null;
         }
       };
 
-      countRafId = requestAnimationFrame(step);
+      tick();
     }
 
     async function loadViewCounter() {
@@ -1311,8 +1383,8 @@
       const viewsDiv = document.createElement("div");
       viewsDiv.className = "views-counter";
       viewsDiv.id = "viewsCounter";
-      viewsDiv.textContent = formatViewsLabel(displayedViewCount);
       container.appendChild(viewsDiv);
+      renderViewsCounterDigits(displayedViewCount, false);
 
       const postMap = new Map(allPosts.map((p) => [p.date, p]));
 
