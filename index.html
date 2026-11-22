@@ -170,15 +170,20 @@
       padding-right: 148px;
     }
 
-    /* アクセスカウンター表示 */
     .views-counter {
       font-family: var(--font-en);
       font-weight: 900;
       font-size: 1.35rem;
       letter-spacing: 0.01em;
+      font-variant-numeric: tabular-nums;
       color: #ffffff;
       margin-bottom: 14px;
       min-height: 1.5em;
+      display: inline-block;
+      transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .views-counter.counting {
+      transform: translateY(-1px);
     }
 
     .top-actions {
@@ -633,6 +638,9 @@
   </div>
 
   <script>
+    // ★ここにGoogle Apps ScriptのウェブアプリURLを貼り付けてください
+    const GAS_COUNTER_URL = "https://script.google.com/macros/s/AKfycbwEShpCN7nifVMJwH9Zp5RFn-0Rcm4LpQEGfP9bbSeYMF60l8pLjE-YZruyBrrHPxFRyQ/exec";
+
     let allPosts = [];
     let selectedDateStr = null;
     let frontDataUrl = null;
@@ -641,7 +649,9 @@
     let customPipPos = null;
     let isSwappedView = false;
     let notifyEnabled = false;
-    let currentViewCount = null;
+
+    let displayedViewCount = 0;
+    let countRafId = null;
 
     window.addEventListener("DOMContentLoaded", () => {
       const owner = localStorage.getItem("gh_owner") || "";
@@ -663,39 +673,85 @@
 
       syncNotificationState();
       updateAuthUI();
-      loadViewCounter();
+      renderRightCalendar();
       loadPosts();
+      loadViewCounter();
 
       setInterval(() => {
         checkNewPostsForNotification();
       }, 60000);
     });
 
+    function formatViewsLabel(num) {
+      const safeNum = Math.max(0, Math.floor(Number(num) || 0));
+      return `${safeNum} ${safeNum === 1 ? "view" : "views"}`;
+    }
+
     function updateViewsCounterText() {
       const el = document.getElementById("viewsCounter");
       if (!el) return;
-      el.textContent = typeof currentViewCount === "number" ? `${currentViewCount} views` : "";
+      el.textContent = formatViewsLabel(displayedViewCount);
+    }
+
+    function animateCountUp(toValue, duration = 750) {
+      const el = document.getElementById("viewsCounter");
+      const target = Math.max(0, Math.floor(Number(toValue) || 0));
+      const startValue = displayedViewCount;
+
+      if (countRafId) cancelAnimationFrame(countRafId);
+
+      if (target === startValue) {
+        displayedViewCount = target;
+        updateViewsCounterText();
+        return;
+      }
+
+      if (el) el.classList.add("counting");
+      const startTime = performance.now();
+
+      const step = (now) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / duration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        displayedViewCount = Math.round(startValue + (target - startValue) * eased);
+        updateViewsCounterText();
+
+        if (progress < 1) {
+          countRafId = requestAnimationFrame(step);
+        } else {
+          displayedViewCount = target;
+          updateViewsCounterText();
+          if (el) el.classList.remove("counting");
+          countRafId = null;
+        }
+      };
+
+      countRafId = requestAnimationFrame(step);
     }
 
     async function loadViewCounter() {
-      // ★ここにコピーしたGASのウェブアプリURLを貼り付けます
-      const GAS_COUNTER_URL = "https://script.google.com/macros/s/AKfycbwEShpCN7nifVMJwH9Zp5RFn-0Rcm4LpQEGfP9bbSeYMF60l8pLjE-YZruyBrrHPxFRyQ/exec";
+      if (!GAS_COUNTER_URL || GAS_COUNTER_URL.includes("YOUR_DEPLOYMENT_ID")) {
+        console.warn("GAS_COUNTER_URL が未設定です");
+        return;
+      }
 
-      // ログイン済み（管理者本人）ならカウントを増やさず現在の数字だけ取得
       const isOwner = Boolean(localStorage.getItem("gh_token"));
-      const fetchUrl = isOwner ? `${GAS_COUNTER_URL}?mode=view` : GAS_COUNTER_URL;
+      const sep = GAS_COUNTER_URL.includes("?") ? "&" : "?";
+      const fetchUrl = isOwner ? `${GAS_COUNTER_URL}${sep}mode=view` : GAS_COUNTER_URL;
 
       try {
         const res = await fetch(fetchUrl);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (typeof data.count === "number") {
-          currentViewCount = data.count;
-          updateViewsCounterText();
+        if (!res.ok) {
+          console.error("カウンター取得HTTPエラー:", res.status);
+          return;
         }
-      } catch (_) {
-        currentViewCount = null;
-        updateViewsCounterText();
+        const data = await res.json();
+        const rawCount = typeof data.count === "number" ? data.count : Number(data.count);
+        if (Number.isFinite(rawCount)) {
+          animateCountUp(rawCount);
+        }
+      } catch (err) {
+        console.error("カウンター取得失敗:", err);
       }
     }
 
@@ -1255,7 +1311,7 @@
       const viewsDiv = document.createElement("div");
       viewsDiv.className = "views-counter";
       viewsDiv.id = "viewsCounter";
-      viewsDiv.textContent = typeof currentViewCount === "number" ? `${currentViewCount} views` : "";
+      viewsDiv.textContent = formatViewsLabel(displayedViewCount);
       container.appendChild(viewsDiv);
 
       const postMap = new Map(allPosts.map((p) => [p.date, p]));
