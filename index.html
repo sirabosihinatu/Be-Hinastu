@@ -1,10 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <!-- 基本のファビコン（旧ブラウザ・検索結果用：32x32px または 48x48px） -->
-  <link rel="icon" href="icon/fav.png" sizes="32x32">
-    <!-- iPhone・iPadのホーム画面追加用（180x180px） -->
-  <link rel="apple-touch-icon" href="icon/iOS.png">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Be Hinatsu</title>
@@ -193,7 +189,6 @@
       height: 20px;
     }
 
-    /* ベル許可状態（白背景＋黒ベル） */
     .icon-btn.bell-enabled {
       background: #d4d4d8;
       color: #09090b;
@@ -242,7 +237,6 @@
       min-width: 0;
     }
 
-    /* 未撮影日：リキッドグラス効果 */
     .day-thumb {
       position: relative;
       width: 100%;
@@ -313,7 +307,6 @@
       color: #e4e4e8;
     }
 
-    /* モーダル（通知確認・ログイン・投稿） */
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -392,8 +385,19 @@
       text-align: center;
       font-family: var(--font-jp);
       font-size: 0.8rem;
+      line-height: 1.45;
       color: var(--muted);
       cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+    .file-box:hover {
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+    .file-box.drag-over {
+      border-color: #ffffff;
+      border-style: solid;
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
     }
     .file-box.ready {
       border-color: #4ade80;
@@ -499,11 +503,8 @@
 </head>
 <body>
 
-  <!-- 右上アクションボタン（ベル・投稿・鍵） -->
   <div class="top-actions">
-    <button class="icon-btn" id="bellTriggerBtn" title="通知設定" onclick="openBellModal()">
-      <!-- JSで許可状態に応じてベルSVGを切り替えます -->
-    </button>
+    <button class="icon-btn" id="bellTriggerBtn" title="通知設定" onclick="openBellModal()"></button>
     <button class="icon-btn" id="postTriggerBtn" style="display:none;" title="写真をアップロード" onclick="openModal('postModal')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
         <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -589,11 +590,11 @@
       </div>
       <div class="file-row">
         <label class="file-box" id="frontLabel">
-          <strong>表（メイン）</strong><br /><span id="frontName">PNGを選択</span>
+          <strong>表（メイン）</strong><br /><span id="frontName">PNGを選択 / ドロップ</span>
           <input type="file" id="frontInput" accept="image/*" onchange="handleFileSelect('front')" />
         </label>
         <label class="file-box" id="backLabel">
-          <strong>裏（右上小窓）</strong><br /><span id="backName">PNGを選択</span>
+          <strong>裏（右上小窓）</strong><br /><span id="backName">PNGを選択 / ドロップ</span>
           <input type="file" id="backInput" accept="image/*" onchange="handleFileSelect('back')" />
         </label>
       </div>
@@ -617,8 +618,6 @@
 
     let customPipPos = null;
     let isSwappedView = false;
-
-    // 通知トグル状態（ブラウザ権限がgrantedかつユーザーが有効にしているか）
     let notifyEnabled = false;
 
     window.addEventListener("DOMContentLoaded", () => {
@@ -633,15 +632,71 @@
       const today = new Date();
       document.getElementById("postDate").value = formatDateISO(today);
 
+      // ページ全体にファイルをドロップしたときに別タブで開かないように防止
+      window.addEventListener("dragover", (e) => e.preventDefault());
+      window.addEventListener("drop", (e) => e.preventDefault());
+
+      setupDropZone("frontLabel", "frontInput", "front");
+      setupDropZone("backLabel", "backInput", "back");
+
       syncNotificationState();
       updateAuthUI();
       loadPosts();
 
-      // 定期的に新着投稿を確認
       setInterval(() => {
         checkNewPostsForNotification();
       }, 60000);
     });
+
+    function setupDropZone(labelId, inputId, side) {
+      const label = document.getElementById(labelId);
+      const input = document.getElementById(inputId);
+
+      label.addEventListener("dragenter", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        label.classList.add("drag-over");
+      });
+
+      label.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+        label.classList.add("drag-over");
+      });
+
+      label.addEventListener("dragleave", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!label.contains(e.relatedTarget)) {
+          label.classList.remove("drag-over");
+        }
+      });
+
+      label.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        label.classList.remove("drag-over");
+
+        const files = e.dataTransfer && e.dataTransfer.files;
+        if (!files || files.length === 0) return;
+
+        const file = files[0];
+        if (!file.type.startsWith("image/")) {
+          document.getElementById("uploadStatus").textContent = "画像ファイルをドロップしてください。";
+          return;
+        }
+
+        // input.files にも反映させる
+        try {
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          input.files = dt.files;
+        } catch (_) {}
+
+        await processSelectedFile(side, file);
+      });
+    }
 
     function syncNotificationState() {
       const savedPref = localStorage.getItem("be_hinatsu_notify_enabled") === "true";
@@ -658,7 +713,6 @@
       btn.classList.toggle("bell-enabled", notifyEnabled);
 
       if (notifyEnabled) {
-        // 通知許可状態：白背景・黒ベル・左右に音波（鳴動線）
         btn.innerHTML = `
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
             <path d="M5.2 6.5A8.5 8.5 0 0 0 3.5 12"></path>
@@ -668,7 +722,6 @@
           </svg>
         `;
       } else {
-        // 未許可・オフ状態：ダーク背景・静かなベル
         btn.innerHTML = `
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M7.5 16V11a4.5 4.5 0 0 1 9 0v5l1.5 2H6l1.5-2Z"></path>
@@ -689,7 +742,7 @@
       if (!("Notification" in window)) {
         banner.classList.remove("show");
         actions.style.display = "none";
-        lead.textContent = "お使いのブラウザは通知機能に対応していません。iPhoneをお使いの場合はSafariからホーム画面に追加してからご利用ください。";
+        lead.textContent = "お使いのブラウザは通知機能に対応していません。";
         openModal("bellModal");
         return;
       }
@@ -856,7 +909,11 @@
       const input = document.getElementById(side === "front" ? "frontInput" : "backInput");
       const file = input.files[0];
       if (!file) return;
+      await processSelectedFile(side, file);
+    }
 
+    async function processSelectedFile(side, file) {
+      document.getElementById("uploadStatus").textContent = "";
       const parsed = extractDateFromFilename(file.name);
       if (parsed) {
         document.getElementById("postDate").value = parsed;
@@ -865,11 +922,11 @@
       const dataUrl = await compressImage(file);
       if (side === "front") {
         frontDataUrl = dataUrl;
-        document.getElementById("frontName").textContent = "選択完了 ✓";
+        document.getElementById("frontName").textContent = `${file.name} ✓`;
         document.getElementById("frontLabel").classList.add("ready");
       } else {
         backDataUrl = dataUrl;
-        document.getElementById("backName").textContent = "選択完了 ✓";
+        document.getElementById("backName").textContent = `${file.name} ✓`;
         document.getElementById("backLabel").classList.add("ready");
       }
     }
@@ -877,8 +934,9 @@
     function swapUploadSides() {
       if (!frontDataUrl && !backDataUrl) return;
       [frontDataUrl, backDataUrl] = [backDataUrl, frontDataUrl];
-      document.getElementById("frontName").textContent = frontDataUrl ? "選択完了 ✓" : "PNGを選択";
-      document.getElementById("backName").textContent = backDataUrl ? "選択完了 ✓" : "PNGを選択";
+      const frontText = document.getElementById("frontName");
+      const backText = document.getElementById("backName");
+      [frontText.textContent, backText.textContent] = [backText.textContent, frontText.textContent];
       document.getElementById("frontLabel").classList.toggle("ready", Boolean(frontDataUrl));
       document.getElementById("backLabel").classList.toggle("ready", Boolean(backDataUrl));
     }
