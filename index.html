@@ -819,7 +819,6 @@
   </div>
 
   <script>
-    // ★ここにGoogle Apps ScriptのウェブアプリURLを貼り付けてください
     const GAS_COUNTER_URL = "https://script.google.com/macros/s/AKfycbwdWEy8NVO-GEuNImVoFeNq2YkiVjQ11o_1tosiKTUVZwS_OH5EwXCdj0Y4Dv6Uby7BlQ/exec";
 
     let allPosts = [];
@@ -940,16 +939,39 @@
     }
 
     function normalizeCountsObj(raw) {
+      const source = raw && typeof raw === "object" ? raw : {};
+      const parseNonNeg = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+      };
       return {
-        heart: Math.max(0, Math.floor(Number((raw && raw.heart) || 0))),
-        zap: Math.max(0, Math.floor(Number((raw && raw.zap) || 0))),
-        laugh: Math.max(0, Math.floor(Number((raw && raw.laugh) || 0)))
+        heart: parseNonNeg(source.heart),
+        zap: parseNonNeg(source.zap),
+        laugh: parseNonNeg(source.laugh)
+      };
+    }
+
+    function mergeValidCounts(currentObj, incomingRaw) {
+      const parsed = normalizeCountsObj(incomingRaw);
+      return {
+        heart: parsed.heart !== null ? parsed.heart : (currentObj.heart || 0),
+        zap: parsed.zap !== null ? parsed.zap : (currentObj.zap || 0),
+        laugh: parsed.laugh !== null ? parsed.laugh : (currentObj.laugh || 0)
+      };
+    }
+
+    function getSafeCache(dateKey) {
+      const c = reactionCacheByDate[dateKey] || {};
+      return {
+        heart: Math.max(0, Math.floor(Number(c.heart) || 0)),
+        zap: Math.max(0, Math.floor(Number(c.zap) || 0)),
+        laugh: Math.max(0, Math.floor(Number(c.laugh) || 0))
       };
     }
 
     function renderReactionsAndShare(animateChangedDigits = true) {
       const dateKey = getActiveDateKey();
-      const counts = normalizeCountsObj(reactionCacheByDate[dateKey]);
+      const counts = getSafeCache(dateKey);
 
       EMOJI_KEYS.forEach((emojiKey) => {
         const countEl = document.getElementById(`count-${emojiKey}`);
@@ -988,8 +1010,9 @@
         if (!res.ok) return;
         const data = await res.json();
         if (seq !== reactionRequestSeq) return;
-        if (data && data.ok && data.counts) {
-          reactionCacheByDate[dateKey] = normalizeCountsObj(data.counts);
+        if (data && data.ok === true && data.counts && typeof data.counts === "object") {
+          const prev = getSafeCache(dateKey);
+          reactionCacheByDate[dateKey] = mergeValidCounts(prev, data.counts);
           if (getActiveDateKey() === dateKey) {
             renderReactionsAndShare(true);
           }
@@ -999,9 +1022,12 @@
 
     async function handleReaction(emojiKey, btnEl) {
       const dateKey = getActiveDateKey();
-      const current = normalizeCountsObj(reactionCacheByDate[dateKey]);
-      current[emojiKey] = current[emojiKey] + 1;
-      reactionCacheByDate[dateKey] = current;
+      const current = getSafeCache(dateKey);
+      const nextVal = current[emojiKey] + 1;
+      reactionCacheByDate[dateKey] = {
+        ...current,
+        [emojiKey]: nextVal
+      };
 
       renderReactionsAndShare(true);
 
@@ -1024,8 +1050,11 @@
         if (!res.ok) return;
         const data = await res.json();
         if (seq !== reactionRequestSeq) return;
-        if (data && data.ok && data.counts) {
-          reactionCacheByDate[dateKey] = normalizeCountsObj(data.counts);
+        if (data && data.ok === true && data.counts && typeof data.counts === "object") {
+          const merged = mergeValidCounts(reactionCacheByDate[dateKey], data.counts);
+          // サーバー応答値が現在表示中の楽観的カウントより小さい場合は巻き戻さない
+          merged[emojiKey] = Math.max(merged[emojiKey], reactionCacheByDate[dateKey][emojiKey] || 0);
+          reactionCacheByDate[dateKey] = merged;
           if (getActiveDateKey() === dateKey) {
             renderReactionsAndShare(true);
           }
