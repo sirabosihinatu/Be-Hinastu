@@ -1003,12 +1003,11 @@
         const data = await res.json();
         if (seq !== reactionRequestSeq) return;
         if (data && data.ok === true && data.counts && typeof data.counts === "object") {
-          const current = getSafeCache(dateKey);
           const parsed = normalizeCountsObj(data.counts);
           reactionCacheByDate[dateKey] = {
-            heart: Math.max(current.heart, parsed.heart ?? 0),
-            zap: Math.max(current.zap, parsed.zap ?? 0),
-            laugh: Math.max(current.laugh, parsed.laugh ?? 0)
+            heart: parsed.heart ?? 0,
+            zap: parsed.zap ?? 0,
+            laugh: parsed.laugh ?? 0
           };
           if (getActiveDateKey() === dateKey) {
             renderReactionsAndShare(true);
@@ -1024,12 +1023,10 @@
       reactionInFlight.add(lockKey);
 
       const current = getSafeCache(dateKey);
-      const nextVal = current[emojiKey] + 1;
       reactionCacheByDate[dateKey] = {
         ...current,
-        [emojiKey]: nextVal
+        [emojiKey]: current[emojiKey] + 1
       };
-
       renderReactionsAndShare(true);
 
       if (btnEl) {
@@ -1053,11 +1050,10 @@
         if (seq !== reactionRequestSeq) return;
         if (data && data.ok === true && data.counts && typeof data.counts === "object") {
           const parsed = normalizeCountsObj(data.counts);
-          const latestLocal = getSafeCache(dateKey);
           reactionCacheByDate[dateKey] = {
-            heart: Math.max(latestLocal.heart, parsed.heart ?? 0),
-            zap: Math.max(latestLocal.zap, parsed.zap ?? 0),
-            laugh: Math.max(latestLocal.laugh, parsed.laugh ?? 0)
+            heart: parsed.heart ?? 0,
+            zap: parsed.zap ?? 0,
+            laugh: parsed.laugh ?? 0
           };
           if (getActiveDateKey() === dateKey) {
             renderReactionsAndShare(true);
@@ -1067,7 +1063,7 @@
       } finally {
         setTimeout(() => {
           reactionInFlight.delete(lockKey);
-        }, 250);
+        }, 200);
       }
     }
 
