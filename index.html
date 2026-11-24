@@ -211,11 +211,15 @@
       100% { transform: scale(1); }
     }
     .reaction-count {
-      font-family: var(--font-en);
+      font-family: "Inter", sans-serif;
       font-weight: 900;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
+      line-height: 1.15;
       font-variant-numeric: tabular-nums;
       color: #d4d4d8;
+      display: inline-flex;
+      align-items: center;
+      min-height: 1em;
     }
 
     /* 共有ボタンエリア */
@@ -718,8 +722,8 @@
           <span class="reaction-count" id="count-zap">0</span>
         </div>
         <div class="reaction-item">
-          <button type="button" class="reaction-btn" data-emoji="starstruck" aria-label="スターストラック" onclick="handleReaction('starstruck', this)">🤣</button>
-          <span class="reaction-count" id="count-starstruck">0</span>
+          <button type="button" class="reaction-btn" data-emoji="laugh" aria-label="爆笑" onclick="handleReaction('laugh', this)">🤣</button>
+          <span class="reaction-count" id="count-laugh">0</span>
         </div>
       </div>
 
@@ -834,8 +838,15 @@
     let renderedDigitsStr = "";
     let countTimerId = null;
 
-    const REACTION_STORAGE_KEY = "be_hinatsu_reactions_v1";
-    const USER_REACTED_KEY = "be_hinatsu_user_reacted_v1";
+    const EMOJI_KEYS = ["heart", "zap", "laugh"];
+    const renderedReactionDigits = {
+      heart: "",
+      zap: "",
+      laugh: ""
+    };
+
+    const REACTION_STORAGE_KEY = "be_hinatsu_reactions_v2";
+    const USER_REACTED_KEY = "be_hinatsu_user_reacted_v2";
 
     window.addEventListener("DOMContentLoaded", () => {
       const owner = localStorage.getItem("gh_owner") || "";
@@ -859,7 +870,8 @@
         if (nextHashDate && nextHashDate !== selectedDateStr) {
           selectedDateStr = nextHashDate;
           isSwappedView = false;
-          renderAll(true);
+          renderAll(true, true);
+          fetchReactionsForActiveDate();
         }
       });
 
@@ -872,7 +884,8 @@
       syncNotificationState();
       updateAuthUI();
       renderRightCalendar();
-      renderReactionsAndShare();
+      renderReactionsAndShare(false);
+      fetchReactionsForActiveDate();
       loadPosts();
       loadViewCounter();
 
@@ -880,6 +893,28 @@
         checkNewPostsForNotification();
       }, 60000);
     });
+
+    function buildSlidingDigitsHtml(nextCount, prevDigitsStr, animateChangedDigits, suffixText = "") {
+      const safeNum = Math.max(0, Math.floor(Number(nextCount) || 0));
+      const nextStr = String(safeNum);
+      const paddedPrev = (prevDigitsStr || "").padStart(nextStr.length, " ");
+
+      let html = "";
+      for (let i = 0; i < nextStr.length; i++) {
+        const oldCh = paddedPrev[i] === " " ? "" : paddedPrev[i];
+        const newCh = nextStr[i];
+        if (animateChangedDigits && oldCh !== newCh) {
+          const outHtml = oldCh ? `<span class="digit-char slide-out-up">${oldCh}</span>` : "";
+          html += `<span class="digit-slot">${outHtml}<span class="digit-char slide-in-up">${newCh}</span></span>`;
+        } else {
+          html += `<span class="digit-slot"><span class="digit-char">${newCh}</span></span>`;
+        }
+      }
+      if (suffixText) {
+        html += `<span class="views-suffix">${suffixText}</span>`;
+      }
+      return { html, nextStr };
+    }
 
     function getDateFromHash() {
       const h = (location.hash || "").replace(/^#/, "").trim();
@@ -903,7 +938,6 @@
       openModal("postModal");
     }
 
-    /* リアクション管理 */
     function readReactionsStore() {
       try {
         return JSON.parse(localStorage.getItem(REACTION_STORAGE_KEY) || "{}");
@@ -937,18 +971,30 @@
       return post ? post.date : (selectedDateStr || formatDateISO(new Date()));
     }
 
-    function renderReactionsAndShare() {
+    function renderReactionsAndShare(animateChangedDigits = true) {
       const dateKey = getActiveDateKey();
       const store = readReactionsStore();
       const userStore = readUserReactedStore();
-      const counts = store[dateKey] || { heart: 0, zap: 0, starstruck: 0 };
+      const counts = store[dateKey] || { heart: 0, zap: 0, laugh: 0 };
       const reactedForDay = userStore[dateKey] || {};
 
-      ["heart", "zap", "starstruck"].forEach((emojiKey) => {
+      EMOJI_KEYS.forEach((emojiKey) => {
         const countEl = document.getElementById(`count-${emojiKey}`);
         const btnEl = document.querySelector(`.reaction-btn[data-emoji="${emojiKey}"]`);
-        if (countEl) countEl.textContent = String(counts[emojiKey] || 0);
-        if (btnEl) btnEl.classList.toggle("reacted", Boolean(reactedForDay[emojiKey]));
+        const rawVal = Math.max(0, Math.floor(Number(counts[emojiKey]) || 0));
+
+        if (countEl) {
+          const prevStr = countEl.dataset.prevDigits || renderedReactionDigits[emojiKey] || "";
+          const shouldAnimate = animateChangedDigits && countEl.dataset.initialized === "1";
+          const { html, nextStr } = buildSlidingDigitsHtml(rawVal, prevStr, shouldAnimate);
+          countEl.innerHTML = html;
+          countEl.dataset.initialized = "1";
+          countEl.dataset.prevDigits = nextStr;
+          renderedReactionDigits[emojiKey] = nextStr;
+        }
+        if (btnEl) {
+          btnEl.classList.toggle("reacted", Boolean(reactedForDay[emojiKey]));
+        }
       });
 
       const [, m, d] = dateKey.split("-");
@@ -958,22 +1004,48 @@
       }
     }
 
+    async function fetchReactionsForActiveDate() {
+      const dateKey = getActiveDateKey();
+      if (!GAS_COUNTER_URL || GAS_COUNTER_URL.includes("YOUR_DEPLOYMENT_ID")) {
+        return;
+      }
+      try {
+        const sep = GAS_COUNTER_URL.includes("?") ? "&" : "?";
+        const url = `${GAS_COUNTER_URL}${sep}type=reactions&date=${encodeURIComponent(dateKey)}`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.ok && data.counts) {
+          const store = readReactionsStore();
+          store[dateKey] = {
+            heart: Math.max(0, Math.floor(Number(data.counts.heart) || 0)),
+            zap: Math.max(0, Math.floor(Number(data.counts.zap) || 0)),
+            laugh: Math.max(0, Math.floor(Number(data.counts.laugh) || 0))
+          };
+          writeReactionsStore(store);
+          if (getActiveDateKey() === dateKey) {
+            renderReactionsAndShare(true);
+          }
+        }
+      } catch (_) {}
+    }
+
     async function handleReaction(emojiKey, btnEl) {
       const dateKey = getActiveDateKey();
       const store = readReactionsStore();
       const userStore = readUserReactedStore();
 
       if (!store[dateKey]) {
-        store[dateKey] = { heart: 0, zap: 0, starstruck: 0 };
+        store[dateKey] = { heart: 0, zap: 0, laugh: 0 };
       }
-      store[dateKey][emojiKey] = (Number(store[dateKey][emojiKey]) || 0) + 1;
+      store[dateKey][emojiKey] = Math.max(0, Math.floor(Number(store[dateKey][emojiKey]) || 0)) + 1;
 
       if (!userStore[dateKey]) userStore[dateKey] = {};
       userStore[dateKey][emojiKey] = true;
 
       writeReactionsStore(store);
       writeUserReactedStore(userStore);
-      renderReactionsAndShare();
+      renderReactionsAndShare(true);
 
       if (btnEl) {
         btnEl.classList.remove("pop");
@@ -988,14 +1060,16 @@
           const res = await fetch(url);
           if (res.ok) {
             const data = await res.json();
-            if (data && data.counts) {
+            if (data && data.ok && data.counts) {
               store[dateKey] = {
-                heart: Number(data.counts.heart ?? store[dateKey].heart),
-                zap: Number(data.counts.zap ?? store[dateKey].zap),
-                starstruck: Number(data.counts.starstruck ?? store[dateKey].starstruck)
+                heart: Math.max(0, Math.floor(Number(data.counts.heart) || 0)),
+                zap: Math.max(0, Math.floor(Number(data.counts.zap) || 0)),
+                laugh: Math.max(0, Math.floor(Number(data.counts.laugh) || 0))
               };
               writeReactionsStore(store);
-              renderReactionsAndShare();
+              if (getActiveDateKey() === dateKey) {
+                renderReactionsAndShare(true);
+              }
             }
           }
         } catch (_) {}
@@ -1032,43 +1106,22 @@
       }
     }
 
-    /* カウンター表示（Inter 900 桁スライド） */
     function renderViewsCounterDigits(nextCount, animateChangedDigits = false) {
       const el = document.getElementById("viewsCounter");
       if (!el) return;
 
       const safeNum = Math.max(0, Math.floor(Number(nextCount) || 0));
-      const nextStr = String(safeNum);
       const suffixText = safeNum === 1 ? "view" : "views";
+      const shouldAnimate = Boolean(el.dataset.initialized && animateChangedDigits);
 
-      const prevStr = renderedDigitsStr;
-      const paddedPrev = prevStr.padStart(nextStr.length, " ");
-
-      if (!el.dataset.initialized || !animateChangedDigits) {
-        let html = "";
-        for (let i = 0; i < nextStr.length; i++) {
-          html += `<span class="digit-slot"><span class="digit-char">${nextStr[i]}</span></span>`;
-        }
-        html += `<span class="views-suffix">${suffixText}</span>`;
-        el.innerHTML = html;
-        el.dataset.initialized = "1";
-        renderedDigitsStr = nextStr;
-        return;
-      }
-
-      let html = "";
-      for (let i = 0; i < nextStr.length; i++) {
-        const oldCh = paddedPrev[i] === " " ? "" : paddedPrev[i];
-        const newCh = nextStr[i];
-        if (oldCh !== newCh) {
-          const outHtml = oldCh ? `<span class="digit-char slide-out-up">${oldCh}</span>` : "";
-          html += `<span class="digit-slot">${outHtml}<span class="digit-char slide-in-up">${newCh}</span></span>`;
-        } else {
-          html += `<span class="digit-slot"><span class="digit-char">${newCh}</span></span>`;
-        }
-      }
-      html += `<span class="views-suffix">${suffixText}</span>`;
+      const { html, nextStr } = buildSlidingDigitsHtml(
+        safeNum,
+        renderedDigitsStr,
+        shouldAnimate,
+        suffixText
+      );
       el.innerHTML = html;
+      el.dataset.initialized = "1";
       renderedDigitsStr = nextStr;
     }
 
@@ -1529,7 +1582,8 @@
         setHashForDate(dateVal);
         isSwappedView = false;
         localStorage.setItem("be_hinatsu_last_seen_date", allPosts[0].date);
-        renderAll(true);
+        renderAll(true, true);
+        fetchReactionsForActiveDate();
 
         statusEl.textContent = "完了しました！（サイト反映には数十秒かかる場合があります）";
         setTimeout(() => {
@@ -1562,12 +1616,13 @@
           localStorage.setItem("be_hinatsu_last_seen_date", allPosts[0].date);
         }
       }
-      renderAll(false);
+      renderAll(false, false);
+      fetchReactionsForActiveDate();
     }
 
-    function renderAll(withFade = true) {
+    function renderAll(withFade = true, animateReactions = true) {
       renderLeftFeatured(withFade);
-      renderReactionsAndShare();
+      renderReactionsAndShare(animateReactions);
       renderRightCalendar();
     }
 
@@ -1639,7 +1694,6 @@
       }
     }
 
-    /* 小窓スナップ＆ダブルクリックリセット */
     function setupPipDragAndSwap(cardEl, subPip) {
       let dragging = false;
       let movedDistance = 0;
@@ -1819,7 +1873,8 @@
                 selectedDateStr = dateKey;
                 setHashForDate(dateKey);
                 isSwappedView = false;
-                renderAll(true);
+                renderAll(true, true);
+                fetchReactionsForActiveDate();
                 if (window.innerWidth <= 860) {
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }
