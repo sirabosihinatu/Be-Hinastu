@@ -165,7 +165,6 @@
       opacity: 0.2;
     }
 
-    /* リアクションエリア */
     .reactions-bar {
       display: flex;
       justify-content: center;
@@ -222,7 +221,6 @@
       min-height: 1em;
     }
 
-    /* 共有ボタンエリア */
     .share-row {
       margin-top: 16px;
       display: flex;
@@ -275,7 +273,6 @@
       padding-right: 148px;
     }
 
-    /* Interフォント＆桁ごとの上下スライドアニメーション */
     .views-counter {
       font-family: "Inter", sans-serif;
       font-weight: 900;
@@ -823,7 +820,7 @@
 
   <script>
     // ★ここにGoogle Apps ScriptのウェブアプリURLを貼り付けてください
-    const GAS_COUNTER_URL = "https://script.google.com/macros/s/AKfycbwEShpCN7nifVMJwH9Zp5RFn-0Rcm4LpQEGfP9bbSeYMF60l8pLjE-YZruyBrrHPxFRyQ/exec";
+    const GAS_COUNTER_URL = "https://script.google.com/macros/s/AKfycbwdWEy8NVO-GEuNImVoFeNq2YkiVjQ11o_1tosiKTUVZwS_OH5EwXCdj0Y4Dv6Uby7BlQ/exec";
 
     let allPosts = [];
     let selectedDateStr = null;
@@ -844,9 +841,8 @@
       zap: "",
       laugh: ""
     };
-
-    const REACTION_STORAGE_KEY = "be_hinatsu_reactions_v2";
-    const USER_REACTED_KEY = "be_hinatsu_user_reacted_v2";
+    const reactionCacheByDate = {};
+    let reactionRequestSeq = 0;
 
     window.addEventListener("DOMContentLoaded", () => {
       const owner = localStorage.getItem("gh_owner") || "";
@@ -938,50 +934,26 @@
       openModal("postModal");
     }
 
-    function readReactionsStore() {
-      try {
-        return JSON.parse(localStorage.getItem(REACTION_STORAGE_KEY) || "{}");
-      } catch (_) {
-        return {};
-      }
-    }
-
-    function writeReactionsStore(store) {
-      try {
-        localStorage.setItem(REACTION_STORAGE_KEY, JSON.stringify(store));
-      } catch (_) {}
-    }
-
-    function readUserReactedStore() {
-      try {
-        return JSON.parse(localStorage.getItem(USER_REACTED_KEY) || "{}");
-      } catch (_) {
-        return {};
-      }
-    }
-
-    function writeUserReactedStore(store) {
-      try {
-        localStorage.setItem(USER_REACTED_KEY, JSON.stringify(store));
-      } catch (_) {}
-    }
-
     function getActiveDateKey() {
       const post = allPosts.find((p) => p.date === selectedDateStr) || allPosts[0];
       return post ? post.date : (selectedDateStr || formatDateISO(new Date()));
     }
 
+    function normalizeCountsObj(raw) {
+      return {
+        heart: Math.max(0, Math.floor(Number((raw && raw.heart) || 0))),
+        zap: Math.max(0, Math.floor(Number((raw && raw.zap) || 0))),
+        laugh: Math.max(0, Math.floor(Number((raw && raw.laugh) || 0)))
+      };
+    }
+
     function renderReactionsAndShare(animateChangedDigits = true) {
       const dateKey = getActiveDateKey();
-      const store = readReactionsStore();
-      const userStore = readUserReactedStore();
-      const counts = store[dateKey] || { heart: 0, zap: 0, laugh: 0 };
-      const reactedForDay = userStore[dateKey] || {};
+      const counts = normalizeCountsObj(reactionCacheByDate[dateKey]);
 
       EMOJI_KEYS.forEach((emojiKey) => {
         const countEl = document.getElementById(`count-${emojiKey}`);
-        const btnEl = document.querySelector(`.reaction-btn[data-emoji="${emojiKey}"]`);
-        const rawVal = Math.max(0, Math.floor(Number(counts[emojiKey]) || 0));
+        const rawVal = counts[emojiKey];
 
         if (countEl) {
           const prevStr = countEl.dataset.prevDigits || renderedReactionDigits[emojiKey] || "";
@@ -991,9 +963,6 @@
           countEl.dataset.initialized = "1";
           countEl.dataset.prevDigits = nextStr;
           renderedReactionDigits[emojiKey] = nextStr;
-        }
-        if (btnEl) {
-          btnEl.classList.toggle("reacted", Boolean(reactedForDay[emojiKey]));
         }
       });
 
@@ -1007,22 +976,20 @@
     async function fetchReactionsForActiveDate() {
       const dateKey = getActiveDateKey();
       if (!GAS_COUNTER_URL || GAS_COUNTER_URL.includes("YOUR_DEPLOYMENT_ID")) {
+        renderReactionsAndShare(false);
         return;
       }
+
+      const seq = ++reactionRequestSeq;
       try {
         const sep = GAS_COUNTER_URL.includes("?") ? "&" : "?";
-        const url = `${GAS_COUNTER_URL}${sep}type=reactions&date=${encodeURIComponent(dateKey)}`;
-        const res = await fetch(url);
+        const url = `${GAS_COUNTER_URL}${sep}type=reactions&date=${encodeURIComponent(dateKey)}&_=${Date.now()}`;
+        const res = await fetch(url, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
+        if (seq !== reactionRequestSeq) return;
         if (data && data.ok && data.counts) {
-          const store = readReactionsStore();
-          store[dateKey] = {
-            heart: Math.max(0, Math.floor(Number(data.counts.heart) || 0)),
-            zap: Math.max(0, Math.floor(Number(data.counts.zap) || 0)),
-            laugh: Math.max(0, Math.floor(Number(data.counts.laugh) || 0))
-          };
-          writeReactionsStore(store);
+          reactionCacheByDate[dateKey] = normalizeCountsObj(data.counts);
           if (getActiveDateKey() === dateKey) {
             renderReactionsAndShare(true);
           }
@@ -1032,48 +999,38 @@
 
     async function handleReaction(emojiKey, btnEl) {
       const dateKey = getActiveDateKey();
-      const store = readReactionsStore();
-      const userStore = readUserReactedStore();
+      const current = normalizeCountsObj(reactionCacheByDate[dateKey]);
+      current[emojiKey] = current[emojiKey] + 1;
+      reactionCacheByDate[dateKey] = current;
 
-      if (!store[dateKey]) {
-        store[dateKey] = { heart: 0, zap: 0, laugh: 0 };
-      }
-      store[dateKey][emojiKey] = Math.max(0, Math.floor(Number(store[dateKey][emojiKey]) || 0)) + 1;
-
-      if (!userStore[dateKey]) userStore[dateKey] = {};
-      userStore[dateKey][emojiKey] = true;
-
-      writeReactionsStore(store);
-      writeUserReactedStore(userStore);
       renderReactionsAndShare(true);
 
       if (btnEl) {
+        btnEl.classList.add("reacted");
         btnEl.classList.remove("pop");
         void btnEl.offsetWidth;
         btnEl.classList.add("pop");
       }
 
-      if (GAS_COUNTER_URL && !GAS_COUNTER_URL.includes("YOUR_DEPLOYMENT_ID")) {
-        try {
-          const sep = GAS_COUNTER_URL.includes("?") ? "&" : "?";
-          const url = `${GAS_COUNTER_URL}${sep}type=reaction&date=${encodeURIComponent(dateKey)}&emoji=${encodeURIComponent(emojiKey)}`;
-          const res = await fetch(url);
-          if (res.ok) {
-            const data = await res.json();
-            if (data && data.ok && data.counts) {
-              store[dateKey] = {
-                heart: Math.max(0, Math.floor(Number(data.counts.heart) || 0)),
-                zap: Math.max(0, Math.floor(Number(data.counts.zap) || 0)),
-                laugh: Math.max(0, Math.floor(Number(data.counts.laugh) || 0))
-              };
-              writeReactionsStore(store);
-              if (getActiveDateKey() === dateKey) {
-                renderReactionsAndShare(true);
-              }
-            }
-          }
-        } catch (_) {}
+      if (!GAS_COUNTER_URL || GAS_COUNTER_URL.includes("YOUR_DEPLOYMENT_ID")) {
+        return;
       }
+
+      const seq = ++reactionRequestSeq;
+      try {
+        const sep = GAS_COUNTER_URL.includes("?") ? "&" : "?";
+        const url = `${GAS_COUNTER_URL}${sep}type=reaction&date=${encodeURIComponent(dateKey)}&emoji=${encodeURIComponent(emojiKey)}&_=${Date.now()}`;
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (seq !== reactionRequestSeq) return;
+        if (data && data.ok && data.counts) {
+          reactionCacheByDate[dateKey] = normalizeCountsObj(data.counts);
+          if (getActiveDateKey() === dateKey) {
+            renderReactionsAndShare(true);
+          }
+        }
+      } catch (_) {}
     }
 
     async function shareSelectedDay() {
@@ -1168,10 +1125,10 @@
 
       const isOwner = Boolean(localStorage.getItem("gh_token"));
       const sep = GAS_COUNTER_URL.includes("?") ? "&" : "?";
-      const fetchUrl = isOwner ? `${GAS_COUNTER_URL}${sep}mode=view` : GAS_COUNTER_URL;
+      const fetchUrl = isOwner ? `${GAS_COUNTER_URL}${sep}mode=view&_=${Date.now()}` : `${GAS_COUNTER_URL}${sep}_=${Date.now()}`;
 
       try {
-        const res = await fetch(fetchUrl);
+        const res = await fetch(fetchUrl, { cache: "no-store" });
         if (!res.ok) {
           console.error("カウンター取得HTTPエラー:", res.status);
           return;
