@@ -1,15 +1,13 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-N9Q445M3"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-</script>
-      <!-- 基本のファビコン（旧ブラウザ・検索結果用：32x32px または 48x48px） -->
+  <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-N9Q445M3"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+  </script>
   <link rel="icon" href="icon/fav.png" sizes="32x32">
-    <!-- iPhone・iPadのホーム画面追加用（180x180px） -->
   <link rel="apple-touch-icon" href="icon/iOS.png">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -31,7 +29,7 @@
 
     @media (min-width: 1100px) {
       :root {
-        --card-w: 340px;
+        --card-w: 320px;
       }
     }
 
@@ -67,14 +65,14 @@
       font-weight: 900;
       font-size: 1.25rem;
       letter-spacing: -0.02em;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
     .featured-date {
       font-family: var(--font-en);
       font-weight: 900;
-      font-size: clamp(2.1rem, 2.8vw, 2.75rem);
+      font-size: clamp(2rem, 2.6vw, 2.6rem);
       letter-spacing: 0.01em;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
       text-align: center;
     }
     .featured-card {
@@ -115,10 +113,14 @@
       cursor: grab;
       touch-action: none;
       z-index: 5;
-      transition: box-shadow 0.18s ease, transform 0.18s ease;
+      transition: left 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+                  top 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+                  box-shadow 0.18s ease,
+                  border-color 0.18s ease;
     }
     .featured-card .sub-pip.dragging {
       cursor: grabbing;
+      transition: box-shadow 0.18s ease, border-color 0.18s ease;
       box-shadow: 0 14px 30px rgba(0, 0, 0, 0.95);
       border-color: rgba(255, 255, 255, 0.65);
     }
@@ -148,19 +150,118 @@
       font-size: 0.85rem;
     }
     .featured-memo {
-      margin-top: 12px;
+      margin-top: 10px;
       font-family: var(--font-jp);
-      font-size: 0.88rem;
+      font-size: 0.86rem;
       font-weight: 700;
       color: #e4e4e8;
       text-align: center;
       max-width: var(--card-w);
       line-height: 1.45;
-      min-height: 1.4em;
+      min-height: 1.3em;
       transition: opacity 0.25s ease;
     }
     .featured-memo.fading {
       opacity: 0.2;
+    }
+
+    /* リアクションエリア */
+    .reactions-bar {
+      display: flex;
+      justify-content: center;
+      gap: 22px;
+      margin-top: 14px;
+    }
+    .reaction-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+    .reaction-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #232328;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      cursor: pointer;
+      transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), background 0.18s ease, border-color 0.18s ease;
+    }
+    .reaction-btn:hover {
+      background: #303037;
+      transform: scale(1.08);
+    }
+    .reaction-btn:active {
+      transform: scale(0.92);
+    }
+    .reaction-btn.reacted {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.45);
+    }
+    .reaction-btn.pop {
+      animation: reactionPop 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    @keyframes reactionPop {
+      0% { transform: scale(1); }
+      45% { transform: scale(1.28); }
+      100% { transform: scale(1); }
+    }
+    .reaction-count {
+      font-family: var(--font-en);
+      font-weight: 900;
+      font-size: 0.8rem;
+      font-variant-numeric: tabular-nums;
+      color: #d4d4d8;
+    }
+
+    /* 共有ボタンエリア */
+    .share-row {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .share-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 10px;
+      transition: background 0.18s ease, transform 0.15s ease;
+    }
+    .share-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .share-btn:active {
+      transform: scale(0.96);
+    }
+    .share-btn svg {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .share-label {
+      font-family: var(--font-jp);
+      font-weight: 900;
+      font-size: 0.84rem;
+      line-height: 1.25;
+      text-align: left;
+    }
+    .share-toast {
+      font-family: var(--font-jp);
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #4ade80;
+      min-height: 1.1em;
     }
 
     .right-pane {
@@ -330,6 +431,13 @@
       box-shadow:
         inset 0 1px 1px rgba(255, 255, 255, 0.35),
         0 8px 22px rgba(255, 255, 255, 0.06);
+    }
+    body.is-logged-in .day-thumb:not(.has-post) {
+      cursor: pointer;
+    }
+    body.is-logged-in .day-thumb:not(.has-post):hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.42);
     }
 
     .day-thumb.has-post {
@@ -575,7 +683,7 @@
 
   <div class="top-actions">
     <button class="icon-btn" id="bellTriggerBtn" title="通知設定" onclick="openBellModal()"></button>
-    <button class="icon-btn" id="postTriggerBtn" style="display:none;" title="写真をアップロード" onclick="openModal('postModal')">
+    <button class="icon-btn" id="postTriggerBtn" style="display:none;" title="写真をアップロード" onclick="openPostModalForDate()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
         <line x1="12" y1="5" x2="12" y2="19"></line>
         <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -599,6 +707,35 @@
         <div class="featured-empty">No Photo</div>
       </div>
       <div class="featured-memo" id="featMemo"></div>
+
+      <div class="reactions-bar" id="reactionsBar">
+        <div class="reaction-item">
+          <button type="button" class="reaction-btn" data-emoji="heart" aria-label="ハート" onclick="handleReaction('heart', this)">❤️</button>
+          <span class="reaction-count" id="count-heart">0</span>
+        </div>
+        <div class="reaction-item">
+          <button type="button" class="reaction-btn" data-emoji="zap" aria-label="サンダー" onclick="handleReaction('zap', this)">⚡</button>
+          <span class="reaction-count" id="count-zap">0</span>
+        </div>
+        <div class="reaction-item">
+          <button type="button" class="reaction-btn" data-emoji="starstruck" aria-label="スターストラック" onclick="handleReaction('starstruck', this)">🤣</button>
+          <span class="reaction-count" id="count-starstruck">0</span>
+        </div>
+      </div>
+
+      <div class="share-row">
+        <button type="button" class="share-btn" id="shareDayBtn" onclick="shareSelectedDay()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"></circle>
+            <circle cx="6" cy="12" r="3"></circle>
+            <circle cx="18" cy="19" r="3"></circle>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+          </svg>
+          <span class="share-label" id="shareDayLabel">--/--<br />を共有</span>
+        </button>
+        <div class="share-toast" id="shareToast"></div>
+      </div>
     </aside>
 
     <main class="right-pane" id="archiveContainer"></main>
@@ -697,6 +834,9 @@
     let renderedDigitsStr = "";
     let countTimerId = null;
 
+    const REACTION_STORAGE_KEY = "be_hinatsu_reactions_v1";
+    const USER_REACTED_KEY = "be_hinatsu_user_reacted_v1";
+
     window.addEventListener("DOMContentLoaded", () => {
       const owner = localStorage.getItem("gh_owner") || "";
       const repo = localStorage.getItem("gh_repo") || "";
@@ -709,6 +849,20 @@
       const today = new Date();
       document.getElementById("postDate").value = formatDateISO(today);
 
+      const hashDate = getDateFromHash();
+      if (hashDate) {
+        selectedDateStr = hashDate;
+      }
+
+      window.addEventListener("hashchange", () => {
+        const nextHashDate = getDateFromHash();
+        if (nextHashDate && nextHashDate !== selectedDateStr) {
+          selectedDateStr = nextHashDate;
+          isSwappedView = false;
+          renderAll(true);
+        }
+      });
+
       window.addEventListener("dragover", (e) => e.preventDefault());
       window.addEventListener("drop", (e) => e.preventDefault());
 
@@ -718,6 +872,7 @@
       syncNotificationState();
       updateAuthUI();
       renderRightCalendar();
+      renderReactionsAndShare();
       loadPosts();
       loadViewCounter();
 
@@ -726,6 +881,158 @@
       }, 60000);
     });
 
+    function getDateFromHash() {
+      const h = (location.hash || "").replace(/^#/, "").trim();
+      return /^\d{4}-\d{2}-\d{2}$/.test(h) ? h : null;
+    }
+
+    function setHashForDate(dateStr) {
+      if (!dateStr) return;
+      const targetHash = `#${dateStr}`;
+      if (location.hash !== targetHash) {
+        history.replaceState(null, "", targetHash);
+      }
+    }
+
+    function openPostModalForDate(dateStr = null) {
+      if (dateStr) {
+        document.getElementById("postDate").value = dateStr;
+      } else if (!document.getElementById("postDate").value) {
+        document.getElementById("postDate").value = formatDateISO(new Date());
+      }
+      openModal("postModal");
+    }
+
+    /* リアクション管理 */
+    function readReactionsStore() {
+      try {
+        return JSON.parse(localStorage.getItem(REACTION_STORAGE_KEY) || "{}");
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function writeReactionsStore(store) {
+      try {
+        localStorage.setItem(REACTION_STORAGE_KEY, JSON.stringify(store));
+      } catch (_) {}
+    }
+
+    function readUserReactedStore() {
+      try {
+        return JSON.parse(localStorage.getItem(USER_REACTED_KEY) || "{}");
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function writeUserReactedStore(store) {
+      try {
+        localStorage.setItem(USER_REACTED_KEY, JSON.stringify(store));
+      } catch (_) {}
+    }
+
+    function getActiveDateKey() {
+      const post = allPosts.find((p) => p.date === selectedDateStr) || allPosts[0];
+      return post ? post.date : (selectedDateStr || formatDateISO(new Date()));
+    }
+
+    function renderReactionsAndShare() {
+      const dateKey = getActiveDateKey();
+      const store = readReactionsStore();
+      const userStore = readUserReactedStore();
+      const counts = store[dateKey] || { heart: 0, zap: 0, starstruck: 0 };
+      const reactedForDay = userStore[dateKey] || {};
+
+      ["heart", "zap", "starstruck"].forEach((emojiKey) => {
+        const countEl = document.getElementById(`count-${emojiKey}`);
+        const btnEl = document.querySelector(`.reaction-btn[data-emoji="${emojiKey}"]`);
+        if (countEl) countEl.textContent = String(counts[emojiKey] || 0);
+        if (btnEl) btnEl.classList.toggle("reacted", Boolean(reactedForDay[emojiKey]));
+      });
+
+      const [, m, d] = dateKey.split("-");
+      const shareLabel = document.getElementById("shareDayLabel");
+      if (shareLabel && m && d) {
+        shareLabel.innerHTML = `${Number(m)}/${Number(d)}<br />を共有`;
+      }
+    }
+
+    async function handleReaction(emojiKey, btnEl) {
+      const dateKey = getActiveDateKey();
+      const store = readReactionsStore();
+      const userStore = readUserReactedStore();
+
+      if (!store[dateKey]) {
+        store[dateKey] = { heart: 0, zap: 0, starstruck: 0 };
+      }
+      store[dateKey][emojiKey] = (Number(store[dateKey][emojiKey]) || 0) + 1;
+
+      if (!userStore[dateKey]) userStore[dateKey] = {};
+      userStore[dateKey][emojiKey] = true;
+
+      writeReactionsStore(store);
+      writeUserReactedStore(userStore);
+      renderReactionsAndShare();
+
+      if (btnEl) {
+        btnEl.classList.remove("pop");
+        void btnEl.offsetWidth;
+        btnEl.classList.add("pop");
+      }
+
+      if (GAS_COUNTER_URL && !GAS_COUNTER_URL.includes("YOUR_DEPLOYMENT_ID")) {
+        try {
+          const sep = GAS_COUNTER_URL.includes("?") ? "&" : "?";
+          const url = `${GAS_COUNTER_URL}${sep}type=reaction&date=${encodeURIComponent(dateKey)}&emoji=${encodeURIComponent(emojiKey)}`;
+          const res = await fetch(url);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.counts) {
+              store[dateKey] = {
+                heart: Number(data.counts.heart ?? store[dateKey].heart),
+                zap: Number(data.counts.zap ?? store[dateKey].zap),
+                starstruck: Number(data.counts.starstruck ?? store[dateKey].starstruck)
+              };
+              writeReactionsStore(store);
+              renderReactionsAndShare();
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    async function shareSelectedDay() {
+      const dateKey = getActiveDateKey();
+      setHashForDate(dateKey);
+      const shareUrl = `${location.origin}${location.pathname}#${dateKey}`;
+      const toastEl = document.getElementById("shareToast");
+
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(shareUrl);
+        } else {
+          const tmp = document.createElement("input");
+          tmp.value = shareUrl;
+          document.body.appendChild(tmp);
+          tmp.select();
+          document.execCommand("copy");
+          document.body.removeChild(tmp);
+        }
+        if (toastEl) {
+          toastEl.textContent = "リンクをコピーしました！";
+          setTimeout(() => {
+            if (toastEl.textContent === "リンクをコピーしました！") toastEl.textContent = "";
+          }, 2200);
+        }
+      } catch (_) {
+        if (toastEl) {
+          toastEl.textContent = shareUrl;
+        }
+      }
+    }
+
+    /* カウンター表示（Inter 900 桁スライド） */
     function renderViewsCounterDigits(nextCount, animateChangedDigits = false) {
       const el = document.getElementById("viewsCounter");
       if (!el) return;
@@ -1029,13 +1336,18 @@
       return `${y}-${m}-${day}`;
     }
 
-    function updateAuthUI() {
-      const loggedIn = Boolean(
+    function isLoggedInOwner() {
+      return Boolean(
         localStorage.getItem("gh_owner") &&
         localStorage.getItem("gh_repo") &&
         localStorage.getItem("gh_token")
       );
+    }
+
+    function updateAuthUI() {
+      const loggedIn = isLoggedInOwner();
       document.getElementById("postTriggerBtn").style.display = loggedIn ? "flex" : "none";
+      document.body.classList.toggle("is-logged-in", loggedIn);
     }
 
     function openModal(id) {
@@ -1053,11 +1365,10 @@
       updateAuthUI();
       setTimeout(() => {
         closeModal("loginModal");
-        openModal("postModal");
+        openPostModalForDate(selectedDateStr);
       }, 600);
     }
 
-    // GIFはアニメーションを維持するため圧縮せずそのまま返す
     function compressImage(file, maxWidth = 1080, quality = 0.85) {
       return new Promise((resolve) => {
         const reader = new FileReader();
@@ -1215,6 +1526,7 @@
 
         allPosts = posts;
         selectedDateStr = dateVal;
+        setHashForDate(dateVal);
         isSwappedView = false;
         localStorage.setItem("be_hinatsu_last_seen_date", allPosts[0].date);
         renderAll(true);
@@ -1245,6 +1557,7 @@
         if (!selectedDateStr) {
           selectedDateStr = allPosts[0].date;
         }
+        setHashForDate(selectedDateStr);
         if (!localStorage.getItem("be_hinatsu_last_seen_date")) {
           localStorage.setItem("be_hinatsu_last_seen_date", allPosts[0].date);
         }
@@ -1254,7 +1567,15 @@
 
     function renderAll(withFade = true) {
       renderLeftFeatured(withFade);
+      renderReactionsAndShare();
       renderRightCalendar();
+    }
+
+    function resetPipToInitial(subPip) {
+      customPipPos = null;
+      subPip.style.left = "";
+      subPip.style.top = "12px";
+      subPip.style.right = "12px";
     }
 
     function renderLeftFeatured(withFade = true) {
@@ -1281,7 +1602,7 @@
 
         cardEl.innerHTML = `
           <img class="main-img" src="${mainSrc}" alt="main" />
-          <div class="sub-pip" title="ドラッグで移動・クリックで表裏入れ替え">
+          <div class="sub-pip" title="ドラッグで移動・ダブルクリックで初期位置・クリックで表裏入れ替え">
             <img src="${subSrc}" alt="sub" />
           </div>
         `;
@@ -1318,6 +1639,7 @@
       }
     }
 
+    /* 小窓スナップ＆ダブルクリックリセット */
     function setupPipDragAndSwap(cardEl, subPip) {
       let dragging = false;
       let movedDistance = 0;
@@ -1325,6 +1647,36 @@
       let startY = 0;
       let originLeft = 0;
       let originTop = 0;
+      let swapTimeoutId = null;
+
+      const snapToEdgeOrCorner = () => {
+        const cardRect = cardEl.getBoundingClientRect();
+        const pipRect = subPip.getBoundingClientRect();
+        const pad = 12;
+        const snapThreshold = 26;
+
+        const minLeft = pad;
+        const maxLeft = Math.max(pad, cardRect.width - pipRect.width - pad);
+        const minTop = pad;
+        const maxTop = Math.max(pad, cardRect.height - pipRect.height - pad);
+
+        let curLeft = pipRect.left - cardRect.left;
+        let curTop = pipRect.top - cardRect.top;
+
+        if (Math.abs(curLeft - minLeft) <= snapThreshold) curLeft = minLeft;
+        else if (Math.abs(maxLeft - curLeft) <= snapThreshold) curLeft = maxLeft;
+
+        if (Math.abs(curTop - minTop) <= snapThreshold) curTop = minTop;
+        else if (Math.abs(maxTop - curTop) <= snapThreshold) curTop = maxTop;
+
+        curLeft = Math.min(maxLeft, Math.max(minLeft, curLeft));
+        curTop = Math.min(maxTop, Math.max(minTop, curTop));
+
+        subPip.style.left = `${curLeft}px`;
+        subPip.style.top = `${curTop}px`;
+        subPip.style.right = "auto";
+        customPipPos = { left: curLeft, top: curTop };
+      };
 
       const onPointerDown = (e) => {
         e.preventDefault();
@@ -1363,7 +1715,6 @@
 
         subPip.style.left = `${nextLeft}px`;
         subPip.style.top = `${nextTop}px`;
-        customPipPos = { left: nextLeft, top: nextTop };
       };
 
       const onPointerUp = (e) => {
@@ -1375,10 +1726,22 @@
         }
 
         if (movedDistance < 6) {
-          isSwappedView = !isSwappedView;
-          renderLeftFeatured(true);
+          clearTimeout(swapTimeoutId);
+          swapTimeoutId = setTimeout(() => {
+            isSwappedView = !isSwappedView;
+            renderLeftFeatured(true);
+          }, 190);
+        } else {
+          snapToEdgeOrCorner();
         }
       };
+
+      subPip.addEventListener("dblclick", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        clearTimeout(swapTimeoutId);
+        resetPipToInitial(subPip);
+      });
 
       subPip.addEventListener("pointerdown", onPointerDown);
       subPip.addEventListener("pointermove", onPointerMove);
@@ -1454,10 +1817,17 @@
               `;
               thumb.addEventListener("click", () => {
                 selectedDateStr = dateKey;
+                setHashForDate(dateKey);
                 isSwappedView = false;
                 renderAll(true);
                 if (window.innerWidth <= 860) {
                   window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              });
+            } else {
+              thumb.addEventListener("click", () => {
+                if (isLoggedInOwner()) {
+                  openPostModalForDate(dateKey);
                 }
               });
             }
