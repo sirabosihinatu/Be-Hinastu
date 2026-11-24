@@ -841,6 +841,7 @@
       laugh: ""
     };
     const reactionCacheByDate = {};
+    const reactionInFlight = new Set();
     let reactionRequestSeq = 0;
 
     window.addEventListener("DOMContentLoaded", () => {
@@ -951,15 +952,6 @@
       };
     }
 
-    function mergeValidCounts(currentObj, incomingRaw) {
-      const parsed = normalizeCountsObj(incomingRaw);
-      return {
-        heart: parsed.heart !== null ? parsed.heart : (currentObj.heart || 0),
-        zap: parsed.zap !== null ? parsed.zap : (currentObj.zap || 0),
-        laugh: parsed.laugh !== null ? parsed.laugh : (currentObj.laugh || 0)
-      };
-    }
-
     function getSafeCache(dateKey) {
       const c = reactionCacheByDate[dateKey] || {};
       return {
@@ -1011,8 +1003,13 @@
         const data = await res.json();
         if (seq !== reactionRequestSeq) return;
         if (data && data.ok === true && data.counts && typeof data.counts === "object") {
-          const prev = getSafeCache(dateKey);
-          reactionCacheByDate[dateKey] = mergeValidCounts(prev, data.counts);
+          const current = getSafeCache(dateKey);
+          const parsed = normalizeCountsObj(data.counts);
+          reactionCacheByDate[dateKey] = {
+            heart: Math.max(current.heart, parsed.heart ?? 0),
+            zap: Math.max(current.zap, parsed.zap ?? 0),
+            laugh: Math.max(current.laugh, parsed.laugh ?? 0)
+          };
           if (getActiveDateKey() === dateKey) {
             renderReactionsAndShare(true);
           }
@@ -1022,6 +1019,10 @@
 
     async function handleReaction(emojiKey, btnEl) {
       const dateKey = getActiveDateKey();
+      const lockKey = `${dateKey}:${emojiKey}`;
+      if (reactionInFlight.has(lockKey)) return;
+      reactionInFlight.add(lockKey);
+
       const current = getSafeCache(dateKey);
       const nextVal = current[emojiKey] + 1;
       reactionCacheByDate[dateKey] = {
@@ -1038,12 +1039,12 @@
         btnEl.classList.add("pop");
       }
 
-      if (!GAS_COUNTER_URL || GAS_COUNTER_URL.includes("YOUR_DEPLOYMENT_ID")) {
-        return;
-      }
-
-      const seq = ++reactionRequestSeq;
       try {
+        if (!GAS_COUNTER_URL || GAS_COUNTER_URL.includes("YOUR_DEPLOYMENT_ID")) {
+          return;
+        }
+
+        const seq = ++reactionRequestSeq;
         const sep = GAS_COUNTER_URL.includes("?") ? "&" : "?";
         const url = `${GAS_COUNTER_URL}${sep}type=reaction&date=${encodeURIComponent(dateKey)}&emoji=${encodeURIComponent(emojiKey)}&_=${Date.now()}`;
         const res = await fetch(url, { cache: "no-store" });
@@ -1051,15 +1052,23 @@
         const data = await res.json();
         if (seq !== reactionRequestSeq) return;
         if (data && data.ok === true && data.counts && typeof data.counts === "object") {
-          const merged = mergeValidCounts(reactionCacheByDate[dateKey], data.counts);
-          // サーバー応答値が現在表示中の楽観的カウントより小さい場合は巻き戻さない
-          merged[emojiKey] = Math.max(merged[emojiKey], reactionCacheByDate[dateKey][emojiKey] || 0);
-          reactionCacheByDate[dateKey] = merged;
+          const parsed = normalizeCountsObj(data.counts);
+          const latestLocal = getSafeCache(dateKey);
+          reactionCacheByDate[dateKey] = {
+            heart: Math.max(latestLocal.heart, parsed.heart ?? 0),
+            zap: Math.max(latestLocal.zap, parsed.zap ?? 0),
+            laugh: Math.max(latestLocal.laugh, parsed.laugh ?? 0)
+          };
           if (getActiveDateKey() === dateKey) {
             renderReactionsAndShare(true);
           }
         }
-      } catch (_) {}
+      } catch (_) {
+      } finally {
+        setTimeout(() => {
+          reactionInFlight.delete(lockKey);
+        }, 250);
+      }
     }
 
     async function shareSelectedDay() {
